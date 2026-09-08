@@ -1,0 +1,215 @@
+/*
+ * The chain rail. The transmit path drawn as a vertical run of stages, because
+ * the signal really does pass through them in this order and nothing else in the
+ * interface shows that. Each row is a tap point: the level printed beside it is
+ * what a probe would read there.
+ */
+
+.rail { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+
+.list { display: flex; flex-direction: column; position: relative; }
+
+/* The conductor: one continuous line the stages hang off. */
+.list::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(180deg, var(--phosphor-dim), var(--panel-edge) 55%, var(--heat-2));
+  opacity: 0.55;
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 19px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2);
+  padding: 4px var(--s1) 4px 0;
+  text-align: left;
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast) var(--ease);
+  width: 100%;
+}
+
+.stage:hover { background: rgba(255, 255, 255, 0.035); }
+
+.stage[data-selected='true'] { background: rgba(95, 210, 232, 0.1); }
+
+.stage[data-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--phosphor);
+}
+
+/* The node on the conductor. Its size and colour are the live signal level. */
+.node {
+  justify-self: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--panel-deep);
+  border: 1px solid var(--panel-edge);
+  box-shadow: 0 0 0 2px var(--panel);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.stage[data-domain='acoustic'] .node[data-live='true'] { background: #b9a3d8; border-color: #b9a3d8; }
+.stage[data-domain='audio'] .node[data-live='true'] { background: #8fd8b4; border-color: #8fd8b4; }
+.stage[data-domain='digital'] .node[data-live='true'] { background: var(--smith); border-color: var(--smith); }
+.stage[data-domain='rf-low'] .node[data-live='true'] { background: var(--phosphor); border-color: var(--phosphor); }
+.stage[data-domain='rf-high'] .node[data-live='true'] { background: var(--heat-1); border-color: var(--heat-1); }
+.stage[data-domain='radiated'] .node[data-live='true'] { background: var(--heat-2); border-color: var(--heat-2); }
+
+.node[data-live='true'] { box-shadow: 0 0 0 2px var(--panel), 0 0 9px currentColor; }
+
+.stage[data-alarm='true'] .node {
+  background: var(--heat-3);
+  border-color: var(--heat-3);
+  animation: pulse 900ms ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--panel), 0 0 4px var(--heat-3); }
+  50% { box-shadow: 0 0 0 2px var(--panel), 0 0 14px var(--heat-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-alarm='true'] .node { animation: none; }
+}
+
+.body { min-width: 0; display: flex; flex-direction: column; gap: 0; }
+
+.name {
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--silk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage[data-selected='true'] .name,
+.stage:hover .name { color: var(--silk-bright); }
+
+.part {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  color: var(--silk-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.level {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--phosphor-dim);
+  line-height: 1.35;
+  /* Two lines is enough for any level string the chain produces; past that the
+     detail belongs on the Handbook page, not in the rail. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stage[data-live='true'] .level { color: var(--phosphor); }
+.stage[data-alarm='true'] .level { color: var(--heat-3); font-weight: 500; }
+
+.alarmRow {
+  grid-column: 2 / -1;
+  padding-top: 2px;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  line-height: 1.35;
+  color: var(--heat-2);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding-top: var(--s1);
+}
+
+.footNote {
+  font-size: var(--t-legend);
+  line-height: 1.4;
+  color: var(--silk-dim);
+  letter-spacing: 0.01em;
+}
+
+/* Breakdown list, shown when the exploded view is active. */
+.parts { display: flex; flex-direction: column; gap: 1px; }
+
+.partRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s2);
+  padding: 3px var(--s1);
+  border-radius: var(--r-sm);
+  text-align: left;
+  width: 100%;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.partRow:hover { background: rgba(255, 255, 255, 0.035); }
+.partRow[data-selected='true'] { background: rgba(95, 210, 232, 0.1); }
+
+.partName {
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  color: var(--silk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.partTemp {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--silk-dim);
+}
+
+.damageDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--panel-edge);
+}
+
+.damageDot[data-level='warn'] { background: var(--heat-1); }
+.damageDot[data-level='hot'] { background: var(--heat-2); }
+.damageDot[data-level='fault'] { background: var(--heat-3); box-shadow: 0 0 8px var(--heat-glow); }
+
+.assembly {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 700;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  margin: var(--s2) 0 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.assembly:first-child { margin-top: 0; }

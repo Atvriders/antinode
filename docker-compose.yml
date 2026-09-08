@@ -1,0 +1,39 @@
+# Antinode — run the published image.
+#
+#   docker compose up -d
+#   open http://localhost:3042
+#
+# This pulls the multi-architecture image built by GitHub Actions. Nothing is
+# built locally and nothing is fetched at run time: the container serves its own
+# fonts and has no outbound network dependency at all, so it works on a venue
+# network that only offers a switch.
+
+services:
+  antinode:
+    image: ghcr.io/atvriders/antinode:${TAG:-latest}
+    container_name: antinode
+    # To build from this checkout instead of pulling, comment out `image:` above
+    # and uncomment the two lines below.
+    # build:
+    #   context: .
+    ports:
+      # host:container — change the host side if 3042 is taken.
+      - "3042:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M

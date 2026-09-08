@@ -1,0 +1,217 @@
+/* Antinode — design tokens. The only place colour, type and spacing are defined. */
+
+:root {
+  /* ── Surface: anodised instrument panel ───────────────────────────────── */
+  --panel: #141a1c;
+  --panel-deep: #0d1113;
+  --panel-raise: #1e2629;
+  --panel-high: #273134;
+  --panel-line: #2c3639;
+  --panel-edge: #3b4a4e;
+
+  /* ── Live signal: phosphor ────────────────────────────────────────────── */
+  --phosphor: #5fd2e8;
+  --phosphor-bright: #b6f0fa;
+  --phosphor-dim: #2e6e7c;
+  --phosphor-glow: rgba(95, 210, 232, 0.28);
+
+  /* ── Energy and heat ramp ─────────────────────────────────────────────── */
+  --heat-0: #7fd6a8;
+  --heat-1: #f2b441;
+  --heat-2: #e2622a;
+  --heat-3: #c0202b;
+  --heat-glow: rgba(226, 98, 42, 0.3);
+
+  /* ── Impedance / Smith chart ──────────────────────────────────────────── */
+  --smith: #c64fa8;
+  --smith-dim: #6e2f5e;
+
+  /* ── Handbook page ────────────────────────────────────────────────────── */
+  --bone: #e8e2d4;
+  --bone-shade: #d8d1c0;
+  --ink: #232a2c;
+  --ink-soft: #55605f;
+  --ink-rule: #b9b1a0;
+  --ink-red: #9c3b2e;
+
+  /* ── Panel typography colour ──────────────────────────────────────────── */
+  --silk: #a9b7ba;
+  --silk-dim: #6f8085;
+  --silk-bright: #e2ecee;
+
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --f-panel: "IBM Plex Sans Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-num: "Chivo Mono", "SFMono-Regular", ui-monospace, "DejaVu Sans Mono", monospace;
+  --f-book: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+
+  /* Scale is small by default — this is an instrument, not a landing page.
+     Presenter mode multiplies --ui-scale for projection. */
+  --ui-scale: 1;
+  --t-legend: calc(10px * var(--ui-scale));
+  --t-label: calc(11.5px * var(--ui-scale));
+  --t-body: calc(13px * var(--ui-scale));
+  --t-read: calc(15px * var(--ui-scale));
+  --t-big: calc(22px * var(--ui-scale));
+  --t-huge: calc(38px * var(--ui-scale));
+  --t-dial: calc(clamp(28px, 3.4vw, 52px) * var(--ui-scale));
+
+  --track-legend: 0.14em;
+  --track-label: 0.08em;
+
+  /* ── Space ────────────────────────────────────────────────────────────── */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 36px;
+
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 7px;
+
+  --rail-w: clamp(232px, 18vw, 300px);
+  --rail-r-w: clamp(250px, 20vw, 330px);
+  --transport-h: 108px;
+  --header-h: 46px;
+
+  /* ── Depth ────────────────────────────────────────────────────────────── */
+  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.045) inset, 0 1px 3px rgba(0, 0, 0, 0.5);
+  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 22px rgba(0, 0, 0, 0.55);
+  --engrave: 0 1px 0 rgba(255, 255, 255, 0.05), 0 -1px 0 rgba(0, 0, 0, 0.6) inset;
+
+  --dur-fast: 110ms;
+  --dur: 200ms;
+  --dur-slow: 420ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  color-scheme: dark;
+}
+
+[data-presenter="true"] {
+  --ui-scale: 1.28;
+  --silk: #c2d0d3;
+  --panel-line: #38464a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* This is a fixed-viewport instrument; the document itself never scrolls.
+     The root element needs this as well as the body, because the rails park
+     just outside the right edge when closed and would otherwise extend the
+     html element's scroll width even though nothing is reachable there. */
+  overflow: hidden;
+}
+
+body {
+  background: var(--panel-deep);
+  color: var(--silk);
+  font-family: var(--f-panel);
+  font-size: var(--t-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* The instrument is a dark machined slab lit from above-left. */
+#root {
+  background:
+    radial-gradient(120% 80% at 22% -10%, #202b2e 0%, rgba(32, 43, 46, 0) 62%),
+    linear-gradient(180deg, #12181a 0%, #0b0f10 100%);
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button { background: none; border: none; padding: 0; cursor: pointer; }
+
+:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+::selection { background: var(--phosphor-dim); color: var(--silk-bright); }
+
+/* ── Shared primitives ───────────────────────────────────────────────────── */
+
+.legend {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.label {
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  font-weight: 500;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk);
+}
+
+.num {
+  font-family: var(--f-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+.book {
+  font-family: var(--f-book);
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+/* Thin engraved rule used to separate panel regions. */
+.rule {
+  height: 1px;
+  background: var(--panel-line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+  border: 0;
+  margin: 0;
+}
+
+/* Scrollbars read as machined slots, not OS chrome. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-edge) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.25); }
+*::-webkit-scrollbar-thumb {
+  background: var(--panel-edge);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

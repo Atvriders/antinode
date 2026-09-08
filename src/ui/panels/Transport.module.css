@@ -1,0 +1,157 @@
+/* The transport strip: the radio's own front panel, flattened into a bar. */
+
+.transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  min-width: 0;
+}
+
+/* ── Frequency ───────────────────────────────────────────────────────────── */
+
+.freq {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex: none;
+  user-select: none;
+}
+
+.freq[data-disabled='true'] { opacity: 0.5; }
+
+.freqDigits {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--f-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-dial);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--phosphor-bright);
+  text-shadow: 0 0 18px var(--phosphor-glow);
+}
+
+.freqGroup {
+  display: inline-flex;
+  cursor: ns-resize;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.freqGroup:hover { background: rgba(95, 210, 232, 0.09); }
+.freqGroup:focus-visible { outline: 2px solid var(--phosphor); outline-offset: 1px; }
+
+.freqDigit { display: inline-block; text-align: center; min-width: 0.62em; }
+.freqDigit[data-lead='true'] { color: var(--phosphor-dim); }
+
+.freqDot { color: var(--phosphor-dim); padding: 0 0.06em; }
+
+.freqFine { font-size: 0.58em; align-self: flex-end; color: var(--phosphor); }
+
+.freqUnit { color: var(--silk-dim); align-self: flex-end; padding-bottom: 0.25em; }
+
+/* ── Middle cluster ──────────────────────────────────────────────────────── */
+
+.middle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.bandRow { display: flex; gap: 2px; flex-wrap: wrap; min-width: 0; }
+
+.bandKey {
+  flex: 1 1 auto;
+  min-width: 38px;
+  padding: 4px 6px;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, var(--panel-high) 0%, var(--panel-raise) 100%);
+  box-shadow: var(--lift-1);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.bandKey:hover { color: var(--silk-bright); border-color: var(--panel-edge); }
+
+.bandKey[data-on='true'] {
+  color: var(--panel-deep);
+  background: linear-gradient(180deg, var(--phosphor-bright) 0%, var(--phosphor) 100%);
+  border-color: var(--phosphor);
+  box-shadow: 0 0 12px var(--phosphor-glow);
+}
+
+.knobRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s2) var(--s4);
+  min-width: 0;
+}
+
+/* ── Right cluster: the keys that do something consequential ─────────────── */
+
+.actions { display: flex; align-items: stretch; gap: var(--s2); flex: none; }
+
+.bigKey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 76px;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--panel-high) 0%, var(--panel) 100%);
+  box-shadow: var(--lift-2);
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk);
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.bigKey:hover { color: var(--silk-bright); }
+.bigKey:active { transform: translateY(1px); box-shadow: var(--lift-1); }
+
+.bigKeySub {
+  font-size: var(--t-legend);
+  font-weight: 500;
+  letter-spacing: var(--track-label);
+  color: var(--silk-dim);
+}
+
+.bigKey[data-on='true'] {
+  color: #fff;
+  background: linear-gradient(180deg, var(--heat-2) 0%, var(--heat-3) 100%);
+  border-color: var(--heat-1);
+  box-shadow: 0 0 24px var(--heat-glow), var(--lift-2);
+}
+
+.bigKey[data-on='true'] .bigKeySub { color: rgba(255, 255, 255, 0.78); }
+
+.bigKey[data-busy='true'] {
+  color: var(--panel-deep);
+  background: linear-gradient(180deg, var(--heat-1) 0%, #d09a2c 100%);
+  border-color: var(--heat-1);
+}
+
+@media (max-width: 900px) {
+  .transport { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+  .freqDigits { font-size: calc(30px * var(--ui-scale)); }
+  .actions { justify-content: stretch; }
+  .bigKey { flex: 1; }
+}

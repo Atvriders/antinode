@@ -1,0 +1,202 @@
+/*
+ * The instrument cluster. It floats over the model rather than sitting in a rail
+ * because these numbers must stay in the same eye-line as the thing they
+ * describe — you should be able to watch the feedline glow and the SWR climb
+ * without moving your eyes.
+ */
+
+.cluster {
+  display: flex;
+  gap: var(--s2);
+  align-items: stretch;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: linear-gradient(180deg, rgba(30, 38, 41, 0.94) 0%, rgba(20, 26, 28, 0.94) 100%);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--r-md);
+  box-shadow: var(--lift-2);
+  backdrop-filter: blur(6px);
+  min-width: 0;
+}
+
+.row { display: flex; gap: var(--s4); align-items: flex-start; min-width: 0; }
+
+.meters { display: flex; flex-direction: column; gap: var(--s2); min-width: 190px; }
+
+.meterRow { display: grid; grid-template-columns: 46px minmax(0, 1fr) 58px; gap: var(--s2); align-items: center; }
+
+.meterLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.meterValue {
+  font-family: var(--f-num);
+  font-size: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--silk-bright);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.meterValue[data-tone='good'] { color: var(--phosphor); }
+.meterValue[data-tone='warn'] { color: var(--heat-1); }
+.meterValue[data-tone='hot'] { color: var(--heat-2); }
+.meterValue[data-tone='fault'] { color: var(--heat-3); }
+
+/* The SWR figure gets its own scale, because it is the number the whole app is about. */
+.swrBlock { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+
+.swrValue {
+  font-family: var(--f-num);
+  font-size: calc(30px * var(--ui-scale));
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--phosphor-bright);
+  transition: color var(--dur) var(--ease);
+}
+
+.swrValue[data-tone='warn'] { color: var(--heat-1); }
+.swrValue[data-tone='hot'] { color: var(--heat-2); }
+.swrValue[data-tone='fault'] { color: var(--heat-3); }
+
+.swrWhere {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.split { display: flex; flex-direction: column; gap: 1px; }
+
+.splitRow { display: flex; justify-content: space-between; gap: var(--s3); }
+
+.splitLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.splitValue {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--silk);
+}
+
+.splitValue[data-tone='bad'] { color: var(--heat-2); }
+
+/* Protection banner: appears only when the radio is actually doing something
+   about a problem, and says what and why in one sentence. */
+.protection {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--heat-2);
+  background: linear-gradient(180deg, rgba(226, 98, 42, 0.2) 0%, rgba(192, 32, 43, 0.16) 100%);
+  color: #ffd9c4;
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  letter-spacing: 0.01em;
+  box-shadow: var(--lift-2);
+  max-width: 52ch;
+}
+
+.protection[data-level='shutdown'] { border-color: var(--heat-3); background: rgba(192, 32, 43, 0.28); }
+.protection[data-level='watch'] { border-color: var(--heat-1); background: rgba(242, 180, 65, 0.14); color: #ffeccb; }
+
+.protectionLamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+  animation: blink 1s steps(2, end) infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+@media (prefers-reduced-motion: reduce) { .protectionLamp { animation: none } }
+
+/* Event log */
+
+.log { display: flex; flex-direction: column; gap: 1px; max-height: 118px; overflow: auto; min-width: 230px; }
+
+.logRow { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--s2); align-items: baseline; }
+
+.logTime {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--silk-dim);
+}
+
+.logText {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  line-height: 1.4;
+  color: var(--silk);
+  letter-spacing: 0.01em;
+}
+
+.logRow[data-severity='warn'] .logText { color: var(--heat-1); }
+.logRow[data-severity='fault'] .logText { color: var(--heat-3); }
+
+.logEmpty { font-size: var(--t-legend); color: var(--silk-dim); margin: 0; }
+
+@media (max-width: 900px) {
+  .block { padding: var(--s2); }
+  .meters { min-width: 150px; }
+  .log { display: none; }
+}
+
+/* Solver advice: sentences, not readings. Set narrower than the meter block so
+   it reads as prose rather than as another column of figures. */
+
+.advice {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  max-width: 62ch;
+}
+
+.adviceItem {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: var(--heat-1);
+  padding-left: 10px;
+  position: relative;
+}
+
+.adviceItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}

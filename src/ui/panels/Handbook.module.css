@@ -1,0 +1,252 @@
+/*
+ * The Handbook card. Everything explanatory in this app is printed on paper;
+ * everything live is on a panel. This is the paper.
+ */
+
+.card {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 30%),
+    var(--bone);
+  color: var(--ink);
+  box-shadow: -18px 0 44px rgba(0, 0, 0, 0.55);
+  animation: slide var(--dur-slow) var(--ease);
+}
+
+/* Slides, but never fades: a translucent page over the antenna list underneath
+   puts two sets of numbers on top of each other, which is worse than no
+   animation at all. */
+@keyframes slide {
+  from { transform: translateX(14px); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+}
+
+/* A printed page has a trim edge. */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px var(--ink-rule) inset;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s4) var(--s4) var(--s2);
+  border-bottom: 2px solid var(--ink);
+}
+
+.eyebrow {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--ink-red);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--f-book);
+  font-size: calc(20px * var(--ui-scale));
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.part {
+  margin: 3px 0 0;
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.35);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.close:hover { color: var(--ink); border-color: var(--ink); }
+.close:focus-visible { outline-color: var(--ink-red); }
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--s3) var(--s4) var(--s5);
+}
+
+.lede {
+  font-family: var(--f-book);
+  font-size: calc(15px * var(--ui-scale));
+  line-height: 1.5;
+  margin: 0 0 var(--s3);
+  color: var(--ink);
+}
+
+.prose {
+  font-family: var(--f-book);
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1.58;
+  margin: 0 0 var(--s3);
+  color: var(--ink);
+  hyphens: auto;
+}
+
+.prose code,
+.lede code {
+  font-family: var(--f-num);
+  font-size: 0.9em;
+  background: rgba(35, 42, 44, 0.07);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.prose strong { font-weight: 600; }
+
+/* Section heads are the small caps of a technical manual. */
+.section {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 700;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: var(--s4) 0 var(--s2);
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--ink-rule);
+}
+
+/* Live values printed into the page, so the reader sees text and measurement
+   in the same place. These update as the simulation runs. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: var(--s2) var(--s3);
+  margin: var(--s3) 0;
+  padding: var(--s3);
+  background: rgba(35, 42, 44, 0.05);
+  border-left: 2px solid var(--ink-red);
+}
+
+.figure { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.figureLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.figureValue {
+  font-family: var(--f-num);
+  font-size: calc(14px * var(--ui-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.figureValue[data-tone='warn'] { color: #9a6a12; }
+.figureValue[data-tone='hot'] { color: #a8471c; }
+.figureValue[data-tone='fault'] { color: var(--ink-red); font-weight: 600; }
+
+/* The misconception block — the reason this app exists. */
+.myth {
+  margin: var(--s3) 0;
+  padding: var(--s3);
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-sm);
+  background: rgba(156, 59, 46, 0.05);
+}
+
+.mythLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 700;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--ink-red);
+  margin-bottom: var(--s1);
+}
+
+.mythText {
+  font-family: var(--f-book);
+  font-size: calc(13.5px * var(--ui-scale));
+  line-height: 1.5;
+  margin: 0;
+}
+
+.mythText + .mythText { margin-top: var(--s2); }
+
+/* Fidelity stamp — honest labelling of what is modelled vs sourced. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: var(--s3);
+  padding: 3px 7px;
+  border: 1px solid var(--ink-rule);
+  border-radius: 2px;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.stamp[data-fidelity='representative'] { color: var(--ink-red); border-color: currentColor; }
+
+.footnote {
+  margin: var(--s4) 0 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--ink-rule);
+  font-family: var(--f-book);
+  font-size: calc(12px * var(--ui-scale));
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.linkRow { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+
+.link {
+  padding: 3px 8px;
+  border: 1px solid var(--ink-rule);
+  border-radius: 2px;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.4);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.link:hover { color: var(--ink); border-color: var(--ink); }
+.link:focus-visible { outline-color: var(--ink-red); }

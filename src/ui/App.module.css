@@ -1,0 +1,222 @@
+/* Antinode — the instrument shell. One milled face, four regions. */
+
+.app {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "chain  view   station"
+    "transport transport transport";
+  grid-template-columns: minmax(0, var(--rail-w)) minmax(0, 1fr) minmax(0, var(--rail-r-w));
+  grid-template-rows: var(--header-h) minmax(0, 1fr) auto;
+  height: 100%;
+  gap: 1px;
+  background: var(--panel-line);
+  /* Positioned, so the drawers below are contained by this box rather than by
+     the viewport — without it the clip has nothing to clip. */
+  position: relative;
+  /* The rails become drawers that park just off the right edge when closed.
+     Without clipping here that parked drawer extends the page and the whole
+     document scrolls sideways. `clip` rather than `hidden` so this does not
+     become a scroll container and steal the rails' own scrolling. */
+  overflow: hidden;
+  overflow: clip;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: 0 var(--s3);
+  background: linear-gradient(180deg, var(--panel-high) 0%, var(--panel-raise) 100%);
+  min-width: 0;
+}
+
+.brand { display: flex; align-items: center; gap: var(--s2); flex: none; }
+
+.brandText { display: flex; flex-direction: column; gap: 0; line-height: 1; }
+
+.wordmark {
+  font-family: var(--f-panel);
+  font-size: calc(15px * var(--ui-scale));
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--silk-bright);
+}
+
+.tagline {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  margin-top: 2px;
+}
+
+.views { display: flex; gap: 1px; margin-inline: auto; min-width: 0; }
+
+.viewTab {
+  position: relative;
+  padding: 5px var(--s3) 6px;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.viewTab:hover { color: var(--silk-bright); background: rgba(255, 255, 255, 0.035); }
+
+.viewTab[aria-current='true'] { color: var(--phosphor-bright); }
+
+.viewTab[aria-current='true']::after {
+  content: '';
+  position: absolute;
+  left: var(--s2);
+  right: var(--s2);
+  bottom: 0;
+  height: 2px;
+  background: var(--phosphor);
+  box-shadow: 0 0 8px var(--phosphor-glow);
+}
+
+.headerTools { display: flex; align-items: center; gap: var(--s2); flex: none; }
+
+/* ── Regions ─────────────────────────────────────────────────────────────── */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s2);
+  background: var(--panel);
+  /* The Handbook card is absolutely positioned over this rail. Without a
+     containing block here it resolves against .app and covers the whole screen. */
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Panels in a rail size to their content and the rail scrolls. Without this the
+   flex column squashes them all to fit and everything clips at once. */
+.rail > * { flex: 0 0 auto; }
+
+.railLeft { grid-area: chain; }
+.railRight { grid-area: station; }
+
+.view {
+  grid-area: view;
+  position: relative;
+  background: var(--panel-deep);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.transport {
+  grid-area: transport;
+  background: linear-gradient(180deg, var(--panel-raise) 0%, var(--panel) 100%);
+  min-width: 0;
+}
+
+/* ── Floating instrument cluster inside the viewport ─────────────────────── */
+
+.cluster {
+  position: absolute;
+  left: var(--s3);
+  bottom: var(--s3);
+  right: var(--s3);
+  display: flex;
+  gap: var(--s2);
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cluster > * { pointer-events: auto; }
+
+.viewNote {
+  position: absolute;
+  top: var(--s3);
+  left: var(--s3);
+  max-width: 38ch;
+  z-index: 2;
+  pointer-events: none;
+  margin: 0;
+  font-size: var(--t-legend);
+  line-height: 1.45;
+  color: var(--silk-dim);
+  letter-spacing: 0.01em;
+}
+
+.canvasFallback {
+  display: grid;
+  place-content: center;
+  gap: var(--s3);
+  height: 100%;
+  padding: var(--s5);
+  text-align: center;
+  color: var(--silk-dim);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+.railToggle { display: none; }
+
+@media (max-width: 1240px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "view" "transport"; }
+  /* The rails become drawers. Clearing grid-area matters: a named area that no
+     longer exists in the template would otherwise create an implicit column and
+     push the page sideways. */
+  .railLeft, .railRight { grid-area: auto; }
+  .rail {
+    position: absolute;
+    top: var(--header-h);
+    bottom: 0;
+    width: min(320px, 86vw);
+    z-index: 6;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+    transition: transform var(--dur) var(--ease);
+    border-right: 1px solid var(--panel-line);
+  }
+  .railLeft { left: 0; transform: translateX(-101%); }
+  .railRight { right: 0; left: auto; transform: translateX(101%); border-right: none; border-left: 1px solid var(--panel-line); }
+  .rail[data-open='true'] { transform: translateX(0); }
+  .railToggle { display: inline-flex; }
+}
+
+@media (max-width: 760px) {
+  .views { overflow-x: auto; margin-inline: 0; scrollbar-width: none; }
+  .views::-webkit-scrollbar { display: none; }
+  .tagline { display: none; }
+  .cluster { flex-wrap: wrap; }
+}
+
+/* ── Skip link ───────────────────────────────────────────────────────────── */
+
+.skip {
+  position: absolute;
+  left: var(--s3);
+  top: -60px;
+  z-index: 20;
+  padding: var(--s2) var(--s3);
+  background: var(--phosphor);
+  color: var(--panel-deep);
+  border-radius: var(--r-md);
+  font-weight: 600;
+  transition: top var(--dur) var(--ease);
+}
+
+.skip:focus { top: var(--s2); }
+
+.viewportHost { position: absolute; inset: 0; }
+.viewportHost canvas { display: block; touch-action: none; }

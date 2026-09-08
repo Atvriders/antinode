@@ -1,0 +1,99 @@
+/* The right rail: everything outside the radio, and the instruments that measure it. */
+
+.rail { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+
+.group { display: flex; flex-direction: column; gap: var(--s2); }
+
+.antennaList { display: flex; flex-direction: column; gap: 1px; }
+
+.antenna {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: 5px var(--s2);
+  border-radius: var(--r-sm);
+  text-align: left;
+  width: 100%;
+  border-left: 2px solid transparent;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.antenna:hover { background: rgba(255, 255, 255, 0.04); }
+
+.antenna[data-on='true'] {
+  background: rgba(95, 210, 232, 0.1);
+  border-left-color: var(--phosphor);
+}
+
+.antennaName {
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  color: var(--silk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.antenna[data-on='true'] .antennaName { color: var(--silk-bright); }
+
+.antennaSwr {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--silk-dim);
+  white-space: nowrap;
+}
+
+.antennaSwr[data-tone='good'] { color: var(--phosphor); }
+.antennaSwr[data-tone='warn'] { color: var(--heat-1); }
+.antennaSwr[data-tone='bad'] { color: var(--heat-3); }
+
+.antennaMeta {
+  grid-column: 1 / -1;
+  font-size: var(--t-legend);
+  line-height: 1.35;
+  color: var(--silk-dim);
+  letter-spacing: 0.01em;
+}
+
+.tunerNote {
+  font-size: var(--t-legend);
+  line-height: 1.4;
+  color: var(--silk-dim);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.tunerNote[data-tone='warn'] { color: var(--heat-1); }
+.tunerNote[data-tone='bad'] { color: var(--heat-2); }
+
+.presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+
+.preset {
+  padding: 5px var(--s2);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--r-sm);
+  background: var(--panel-raise);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--silk-dim);
+  text-align: left;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.preset:hover { color: var(--silk-bright); border-color: var(--panel-edge); }
+
+.chartStack { display: flex; flex-direction: column; gap: var(--s2); }
+
+.paramList { display: flex; flex-direction: column; gap: var(--s3); }
+
+.empty {
+  font-size: var(--t-legend);
+  line-height: 1.45;
+  color: var(--silk-dim);
+  margin: 0;
+  letter-spacing: 0.01em;
+}

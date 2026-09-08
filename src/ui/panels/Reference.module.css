@@ -1,0 +1,194 @@
+/* The reference drawer: myths and glossary, printed on the same paper as the
+   Handbook because they are the same kind of thing — words about the subject,
+   not readings from it. */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  background: rgba(6, 9, 10, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: var(--s4);
+}
+
+.sheet {
+  width: min(880px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--bone);
+  color: var(--ink);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-bottom: 2px solid var(--ink);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--f-book);
+  font-size: calc(20px * var(--ui-scale));
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tabs { display: flex; gap: var(--s1); }
+
+.tab {
+  padding: 5px var(--s3);
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-sm);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.tab[aria-selected='true'] { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+.tab:focus-visible { outline-color: var(--ink-red); }
+
+.close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.close:hover { color: var(--ink); border-color: var(--ink); }
+.close:focus-visible { outline-color: var(--ink-red); }
+
+.body { flex: 1; min-height: 0; overflow: auto; padding: var(--s4); }
+
+.search {
+  width: 100%;
+  padding: 7px var(--s3);
+  margin-bottom: var(--s3);
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.55);
+  font-family: var(--f-panel);
+  font-size: calc(13px * var(--ui-scale));
+  color: var(--ink);
+}
+
+.search::placeholder { color: var(--ink-soft); }
+.search:focus-visible { outline: 2px solid var(--ink-red); outline-offset: 1px; }
+
+/* A myth card is set as a correction: the claim struck through in red, the
+   reality underneath in the body face, the number that settles it in mono. */
+.myth { margin: 0 0 var(--s5); }
+
+.mythLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 700;
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--ink-red);
+  margin-bottom: 3px;
+}
+
+.mythClaim {
+  margin: 0 0 var(--s2);
+  font-family: var(--f-book);
+  font-size: calc(16px * var(--ui-scale));
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.mythReality {
+  margin: 0 0 var(--s2);
+  font-family: var(--f-book);
+  font-size: calc(14.5px * var(--ui-scale));
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.mythEvidence {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid var(--ink-red);
+  background: rgba(35, 42, 44, 0.05);
+  font-family: var(--f-num);
+  font-size: calc(12.5px * var(--ui-scale));
+  line-height: 1.5;
+}
+
+.demo {
+  margin-top: var(--s2);
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+}
+
+.demo:focus-visible { outline-color: var(--ink-red); }
+
+/* Glossary */
+
+.entry { margin: 0 0 var(--s3); padding-bottom: var(--s3); border-bottom: 1px solid var(--ink-rule); }
+
+.term {
+  font-family: var(--f-panel);
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.definition {
+  margin: 0;
+  font-family: var(--f-book);
+  font-size: calc(14px * var(--ui-scale));
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.seeAlso {
+  margin: 3px 0 0;
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.empty {
+  font-family: var(--f-book);
+  font-size: calc(14px * var(--ui-scale));
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+@media (max-width: 760px) {
+  .scrim { padding: var(--s2); }
+  .head { flex-wrap: wrap; }
+}

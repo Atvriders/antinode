@@ -1,0 +1,64 @@
+/* Laboratory instruments: hairline graticules, data in phosphor, nothing else. */
+
+.host { width: 100%; min-width: 0; }
+
+.svg { display: block; width: 100%; overflow: visible; }
+
+.grid { stroke: var(--panel-line); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
+.gridFaint { stroke: var(--panel-line); stroke-width: 1; fill: none; opacity: 0.5; vector-effect: non-scaling-stroke; }
+.axis { stroke: var(--panel-edge); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
+
+.tick {
+  font-family: var(--f-num);
+  font-size: 9px;
+  fill: var(--silk-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.legendText {
+  font-family: var(--f-panel);
+  font-size: 9px;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  fill: var(--silk-dim);
+}
+
+.trace { fill: none; stroke: var(--phosphor); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.traceDim { fill: none; stroke: var(--phosphor-dim); stroke-width: 1; }
+.traceHeat { fill: none; stroke: var(--heat-2); stroke-width: 1.5; }
+.traceSmith { fill: none; stroke: var(--smith); stroke-width: 1.4; }
+
+.bandShade { fill: var(--phosphor); opacity: 0.06; }
+.limit { stroke: var(--heat-1); stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+.cursor { stroke: var(--phosphor-bright); stroke-width: 1; }
+
+.marker { fill: var(--smith); stroke: var(--panel-deep); stroke-width: 1; }
+.markerLabel { font-family: var(--f-num); font-size: 9px; fill: var(--silk-bright); }
+
+.caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-bottom: 3px;
+}
+
+.captionLabel {
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  letter-spacing: var(--track-legend);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+}
+
+.captionValue {
+  font-family: var(--f-num);
+  font-size: var(--t-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--phosphor);
+}
+
+.canvas { display: block; width: 100%; border-radius: var(--r-sm); background: var(--panel-deep); }
+
+.scrub { cursor: ew-resize; touch-action: none; }
+.scrub:focus-visible { outline: 2px solid var(--phosphor); outline-offset: 2px; }

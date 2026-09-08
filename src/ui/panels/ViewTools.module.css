@@ -1,0 +1,92 @@
+/* Small controls that belong to the picture rather than the station. */
+
+.tools {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s2);
+  max-width: 240px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s2);
+  background: linear-gradient(180deg, rgba(30, 38, 41, 0.92) 0%, rgba(20, 26, 28, 0.92) 100%);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--r-md);
+  box-shadow: var(--lift-1);
+  backdrop-filter: blur(6px);
+  min-width: 0;
+  width: 100%;
+}
+
+.row { display: flex; gap: var(--s1); flex-wrap: wrap; justify-content: flex-end; }
+
+.note {
+  margin: 0;
+  font-size: var(--t-legend);
+  line-height: 1.4;
+  color: var(--silk-dim);
+  letter-spacing: 0.01em;
+}
+
+.note[data-tone='warn'] { color: var(--heat-1); }
+
+.mic {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px var(--s2);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r-md);
+  background: var(--panel-raise);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk);
+  width: 100%;
+  justify-content: space-between;
+}
+
+.mic[data-live='true'] { border-color: var(--phosphor); color: var(--phosphor-bright); }
+
+.micLevel {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  margin: 0 var(--s2);
+}
+
+.micFill {
+  display: block;
+  height: 100%;
+  background: var(--phosphor);
+  transition: width 60ms linear;
+}
+
+.micFill[data-clip='true'] { background: var(--heat-3); }
+
+.share {
+  padding: 5px var(--s2);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--r-md);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  background: var(--panel-raise);
+}
+
+.share:hover { color: var(--silk-bright); border-color: var(--panel-edge); }

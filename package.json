@@ -1,0 +1,47 @@
+{
+  "name": "antinode",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Antinode \u2014 an interactive 3D explorer of the Icom IC-7300 signal path, from microphone to antenna.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "lint": "eslint .",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run e2e",
+    "shots": "playwright test e2e/views.spec.ts"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.8",
+    "@react-three/fiber": "9.7.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^26.5.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@types/three": "0.185.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "8.2.2",
+    "vitest": "3.2.7"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

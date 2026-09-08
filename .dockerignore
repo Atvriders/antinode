@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.github
+screenshots
+test-results
+playwright-report
+docs
+*.local
+.DS_Store
