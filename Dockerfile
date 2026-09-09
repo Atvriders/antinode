@@ -39,9 +39,17 @@ COPY docker/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Run unprivileged on 8080. Nothing here needs root or a privileged port.
+#
+# The temp directories are created here AND the runtime mount is given the same
+# ownership, because a tmpfs mounted over /var/cache/nginx replaces whatever the
+# image put there with a fresh root-owned filesystem. Getting only the image
+# half right produces a container that crash-loops on
+# `mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)`.
 RUN adduser -D -H -u 10001 antinode \
- && mkdir -p /var/cache/nginx /var/run \
- && chown -R antinode:antinode /var/cache/nginx /var/run /usr/share/nginx/html
+ && mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
+             /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp \
+             /var/cache/nginx/scgi_temp \
+ && chown -R antinode:antinode /var/cache/nginx /usr/share/nginx/html
 
 USER antinode
 EXPOSE 8080

@@ -78,6 +78,20 @@ correct throughout; the URL parser resists prototype pollution; the tour's
 markup escaping cannot be broken; and no real hostname, address or host path is
 committed anywhere.
 
+## Found after the audit, in the field
+
+**The container crash-looped on first run.** `docker-compose.yml` mounted a
+tmpfs over `/var/cache/nginx` to keep the root filesystem read-only, which
+replaced the ownership the image had set with a fresh root-owned filesystem —
+and nginx runs as uid 10001, so it could not create its own temp directories.
+The audit had flagged that nothing in the repository ever ran the container;
+that finding was recorded as open, and this is exactly what it was pointing at.
+
+Fixed by giving the tmpfs `uid`, `gid` and `mode`, consolidating every writable
+path under that one directory, and adding a CI job that starts the image under
+the same constraints compose applies and checks what it serves — including that
+the security headers survive on a cached asset, which is where nginx drops them.
+
 ## Known and open
 
 These were raised, are defensible, and are not fixed:

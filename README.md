@@ -112,6 +112,13 @@ docker compose up -d          # pull and run on port 3042
 TAG=v1.0.0 docker compose up  # pin a version
 ```
 
+The container runs unprivileged, with a read-only root filesystem and a single
+writable tmpfs. That tmpfs has to be owned by the user nginx runs as, which is
+why `docker-compose.yml` sets `uid` and `gid` on it — a plain `tmpfs:` entry is
+mounted root-owned and the container crash-loops on
+`mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)`. If you
+write your own compose file or run it by hand, carry those options across.
+
 To develop:
 
 ```bash

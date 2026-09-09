@@ -22,8 +22,11 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
+      # uid and gid matter. A tmpfs is mounted fresh and root-owned, replacing
+      # the ownership the image set, and nginx runs here as uid 10001 — without
+      # these options it cannot create its own temp directories and the
+      # container crash-loops on startup.
+      - /var/cache/nginx:uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     healthcheck:
