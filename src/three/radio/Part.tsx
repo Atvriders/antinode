@@ -26,6 +26,7 @@ export function Part({
   onPick,
   onHover,
   visible = true,
+  subtle = false,
 }: {
   id: string
   role: MaterialRole
@@ -38,6 +39,8 @@ export function Part({
   onPick: (id: string | null) => void
   onHover?: (id: string | null) => void
   visible?: boolean
+  /** Large parts take a much quieter highlight. See applyState. */
+  subtle?: boolean
 }) {
   const group = useRef<THREE.Group>(null)
   const material = useMemo(() => ownMaterial(role), [role])
@@ -53,7 +56,7 @@ export function Part({
       t.pos[1] + t.explode[1] * explode,
       t.pos[2] + t.explode[2] * explode,
     )
-    applyState(material, { selected, hovered, heat, thermalView })
+    applyState(material, { selected, hovered, heat, thermalView, subtle })
   })
 
   if (!t) return null
@@ -65,6 +68,11 @@ export function Part({
       userData={{ partId: id }}
       visible={visible}
       onClick={(e) => {
+        // A drag that ends over a part is an orbit, not a click. Without this,
+        // every attempt to rotate the model opens the page of whatever happened
+        // to be under the cursor when the mouse came up. `delta` is the distance
+        // the pointer travelled between press and release, in pixels.
+        if (e.delta > 4) return
         e.stopPropagation()
         onPick(selected ? null : id)
       }}

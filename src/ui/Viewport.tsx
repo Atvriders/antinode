@@ -218,14 +218,51 @@ function CameraRig({ view, reducedMotion }: { view: keyof typeof CAMERAS; reduce
   }, [goal, camera, reducedMotion])
   /* eslint-enable react-hooks/immutability */
 
+  /**
+   * A camera move is a one-off, not a force.
+   *
+   * The first version lerped toward the view's preset on every frame, for ever.
+   * That is fine until someone drags to orbit: the rig immediately pulls the
+   * camera back, so the model springs to its starting angle the moment you let
+   * go and the scene cannot be looked at from anywhere else. A view change now
+   * arms a single flight, and the flight ends when it arrives or when the
+   * viewer takes hold of the controls — whichever happens first.
+   */
+  const flying = useRef(false)
+
+  useEffect(() => {
+    flying.current = !reducedMotion
+  }, [goal, reducedMotion])
+
+  useEffect(() => {
+    const c = controls.current
+    if (!c) return
+    const stop = () => {
+      flying.current = false
+    }
+    c.addEventListener('start', stop)
+    return () => c.removeEventListener('start', stop)
+  }, [])
+
   useFrame((_, dt) => {
-    if (reducedMotion) return
+    if (!flying.current || reducedMotion) return
+    const c = controls.current
     const k = 1 - Math.exp(-dt * 3.4)
     camera.position.lerp(goal.pos, k)
-    const c = controls.current
     if (c) {
       c.target.lerp(goal.target, k)
       c.update()
+    }
+    // Close enough. Stopping here matters as much as starting: a rig that never
+    // finishes keeps overriding the viewer for as long as the page is open.
+    const arrived =
+      camera.position.distanceTo(goal.pos) < 0.004 &&
+      (!c || c.target.distanceTo(goal.target) < 0.004)
+    if (arrived) {
+      camera.position.copy(goal.pos)
+      c?.target.copy(goal.target)
+      c?.update()
+      flying.current = false
     }
   })
 

@@ -85,18 +85,32 @@ export function heatColor(v: number, out = scratch): THREE.Color {
  */
 export function applyState(
   material: THREE.MeshStandardMaterial,
-  opts: { selected: boolean; hovered: boolean; heat: number; thermalView: boolean },
+  opts: {
+    selected: boolean
+    hovered: boolean
+    heat: number
+    thermalView: boolean
+    /**
+     * True for the case: a part big enough that lighting it up says nothing.
+     *
+     * Emissive is a flood, not an outline. On a small component it reads as
+     * "this is the one you would pick"; on the whole chassis it reads as "the
+     * radio has turned cyan", and since the case is what the pointer is over
+     * most of the time, the model spent most of its life glowing.
+     */
+    subtle?: boolean
+  },
 ): void {
-  const { selected, hovered, heat, thermalView } = opts
+  const { selected, hovered, heat, thermalView, subtle = false } = opts
   if (thermalView && heat > 0.01) {
     heatColor(heat, material.emissive)
     material.emissiveIntensity = 0.25 + heat * 1.5
   } else if (selected) {
     material.emissive.set(PHOSPHOR)
-    material.emissiveIntensity = 0.55
-  } else if (hovered) {
+    material.emissiveIntensity = subtle ? 0.05 : 0.34
+  } else if (hovered && !subtle) {
     material.emissive.set(PHOSPHOR)
-    material.emissiveIntensity = 0.22
+    material.emissiveIntensity = 0.14
   } else if (heat > 0.35) {
     // Even outside the thermal view, something genuinely hot should show it.
     heatColor(heat, material.emissive)

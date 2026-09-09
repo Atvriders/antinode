@@ -5,7 +5,7 @@ import { Chassis } from './Chassis'
 import { FrontPanel } from './FrontPanel'
 import { Part } from './Part'
 import { mat, ownMaterial } from '../materials'
-import { PART_TRANSFORMS } from '../layout'
+import { PART_TRANSFORMS, SHELL_PART_IDS } from '../layout'
 import { RADIO } from '../scene-constants'
 
 export interface RadioProps {
@@ -64,6 +64,7 @@ export function Radio({
     thermalView,
     onPick: onPickPart,
     onHover: setHover,
+    subtle: SHELL_PART_IDS.includes(id),
   })
 
   return (
