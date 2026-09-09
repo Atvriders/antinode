@@ -68,72 +68,94 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # Build for this runner only. The multi-architecture publish is a separate
-      # workflow; what matters here is that the thing actually starts.
+      # Tagged so docker-compose.yml can pull it by its normal name with TAG=ci.
+      # The point of this job is to exercise the compose files people actually
+      # copy, not an equivalent set of docker run flags — testing the flags
+      # instead is how a container that crash-looped shipped with a green build.
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
-          tags: antinode:ci
+          tags: ghcr.io/atvriders/antinode:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Exactly the constraints docker-compose.yml applies: read-only root, a
-      # tmpfs for the one writable path, no new privileges, unprivileged user.
-      # A container that only starts without them is not the container people run.
-      - name: Start it the way compose does
-        run: |
-          docker run -d --name antinode \
-            --read-only \
-            --tmpfs /var/cache/nginx:uid=10001,gid=10001,mode=0700 \
-            --security-opt no-new-privileges:true \
-            -p 8080:8080 \
-            antinode:ci
+      - name: Start it with docker-compose.yml, exactly as published
+        env:
+          TAG: ci
+        run: docker compose up -d
 
-      - name: Wait for it to report healthy
+      - name: Wait for the compose healthcheck to go healthy
         run: |
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
-              echo "healthy after ${i}s"
-              exit 0
+          for i in $(seq 1 60); do
+            state=$(docker inspect -f '{{.State.Health.Status}}' antinode 2>/dev/null || echo missing)
+            case "$state" in
+              healthy) echo "healthy after ${i}s"; exit 0 ;;
+              unhealthy) echo "::error::container reported unhealthy"; docker logs antinode; exit 1 ;;
+            esac
+            if [ "$(docker inspect -f '{{.State.Running}}' antinode 2>/dev/null)" = "false" ]; then
+              echo "::error::container exited"
+              docker logs antinode
+              exit 1
             fi
             sleep 1
           done
-          echo "::error::the container never became healthy"
+          echo "::error::never became healthy"
           docker logs antinode
           exit 1
 
       - name: Check what it actually serves
         run: |
           set -euo pipefail
+          base=http://127.0.0.1:3042
 
-          # The application itself, and the SPA fallback for a deep link.
-          curl -fsS http://127.0.0.1:8080/ | grep -q '<div id="root">'
-          curl -fsS http://127.0.0.1:8080/some/deep/link | grep -q '<div id="root">'
+          # The application, and the SPA fallback for a deep link.
+          curl -fsS "$base/" | grep -q '<div id="root">'
+          curl -fsS "$base/some/deep/link" | grep -q '<div id="root">'
 
           # A self-hosted font must be served, or the typography silently falls
           # back on a machine with no network.
-          curl -fsS -o /dev/null http://127.0.0.1:8080/fonts/chivo-mono-400.woff2
+          curl -fsS -o /dev/null "$base/fonts/chivo-mono-400.woff2"
 
           # Security headers on the document AND on a cached asset. nginx does
-          # not merge add_header into location blocks, so the asset locations are
-          # where they go missing.
-          asset=$(curl -fsS http://127.0.0.1:8080/ | grep -o '/assets/[^"]*\.js' | head -1)
-          echo "checking headers on / and ${asset}"
-          for path in / "${asset}"; do
-            headers=$(curl -fsS -D - -o /dev/null "http://127.0.0.1:8080${path}")
-            echo "${headers}" | grep -qi 'content-security-policy' \
-              || { echo "::error::no CSP on ${path}"; echo "${headers}"; exit 1; }
-            echo "${headers}" | grep -qi 'x-content-type-options: nosniff' \
-              || { echo "::error::no nosniff on ${path}"; exit 1; }
-            echo "${headers}" | grep -qi 'permissions-policy' \
-              || { echo "::error::no permissions policy on ${path}"; exit 1; }
+          # not merge add_header into location blocks, so the asset locations
+          # are exactly where they go missing.
+          asset=$(curl -fsS "$base/" | grep -o '/assets/[^"]*\.js' | head -1)
+          for path in / "$asset"; do
+            headers=$(curl -fsS -D - -o /dev/null "$base$path")
+            for want in 'content-security-policy' 'x-content-type-options: nosniff' 'permissions-policy'; do
+              echo "$headers" | grep -qi "$want" \
+                || { echo "::error::missing $want on $path"; echo "$headers"; exit 1; }
+            done
           done
 
           # It must not be running as root.
           test "$(docker exec antinode id -u)" = "10001"
 
+      - name: Tear down
+        run: docker compose down
+
+      - name: Start it again with the hardening overlay
+        env:
+          TAG: ci
+        run: docker compose -f docker-compose.yml -f docker-compose.hardened.yml up -d
+
+      - name: The hardened configuration must also come up and serve
+        run: |
+          for i in $(seq 1 60); do
+            state=$(docker inspect -f '{{.State.Health.Status}}' antinode 2>/dev/null || echo missing)
+            [ "$state" = "healthy" ] && break
+            if [ "$(docker inspect -f '{{.State.Running}}' antinode 2>/dev/null)" = "false" ]; then
+              echo "::error::hardened container exited"
+              docker logs antinode
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3042/healthz
+          curl -fsS http://127.0.0.1:3042/ | grep -q '<div id="root">'
+
       - name: Container logs
         if: always()
-        run: docker logs antinode
+        run: docker logs antinode || true

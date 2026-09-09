@@ -7,6 +7,14 @@
 # built locally and nothing is fetched at run time: the container serves its own
 # fonts and has no outbound network dependency at all, so it works on a venue
 # network that only offers a switch.
+#
+# It runs unprivileged and cannot gain privileges. It does NOT set a read-only
+# root filesystem by default, because nginx has to write a pid file and its temp
+# directories, and pinning that down needs mount options that are easy to lose
+# when a compose file gets copied around. If you want that hardening, it is in
+# docker-compose.hardened.yml and it is tested:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.hardened.yml up -d
 
 services:
   antinode:
@@ -20,13 +28,6 @@ services:
       # host:container — change the host side if 3042 is taken.
       - "3042:8080"
     restart: unless-stopped
-    read_only: true
-    tmpfs:
-      # uid and gid matter. A tmpfs is mounted fresh and root-owned, replacing
-      # the ownership the image set, and nginx runs here as uid 10001 — without
-      # these options it cannot create its own temp directories and the
-      # container crash-loops on startup.
-      - /var/cache/nginx:uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     healthcheck:

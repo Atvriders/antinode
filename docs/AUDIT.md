@@ -87,10 +87,21 @@ and nginx runs as uid 10001, so it could not create its own temp directories.
 The audit had flagged that nothing in the repository ever ran the container;
 that finding was recorded as open, and this is exactly what it was pointing at.
 
-Fixed by giving the tmpfs `uid`, `gid` and `mode`, consolidating every writable
-path under that one directory, and adding a CI job that starts the image under
-the same constraints compose applies and checks what it serves — including that
-the security headers survive on a cached asset, which is where nginx drops them.
+The first fix gave the tmpfs `uid`, `gid` and `mode`, consolidated every
+writable path under that one directory, and added a CI job. **It did not work,
+and the CI job passed anyway** — because the job started the image with
+`docker run` and a hand-written set of flags rather than with the compose file
+that actually ships. Testing an equivalent of the artefact is not testing the
+artefact, and a green build said so twice.
+
+The real fix stops the container depending on the consumer's mount options at
+all: the default `docker-compose.yml` no longer sets a read-only root, so the
+directories the image creates and owns are the ones nginx uses. The hardening is
+an opt-in overlay, `docker-compose.hardened.yml`, carrying the tmpfs options it
+needs. CI now brings up both — by running those exact files — and checks the
+healthcheck goes healthy, the application and the SPA fallback are served, a
+self-hosted font is served, the process is not root, and the security headers
+survive on a cached asset, which is where nginx drops them.
 
 ## Known and open
 

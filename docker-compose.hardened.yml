@@ -1,0 +1,21 @@
+# Optional hardening: read-only root filesystem.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.hardened.yml up -d
+#
+# nginx needs one writable directory — for its pid file and its temp paths — so
+# a read-only root needs a tmpfs mounted there. The uid and gid options are not
+# optional: a tmpfs is mounted fresh and root-owned, replacing the ownership the
+# image set, and nginx runs here as uid 10001. Without them the container
+# crash-loops on
+#
+#   mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)
+#
+# This is why the hardening is a separate file rather than the default. It is
+# exercised in CI against this exact file, not against an equivalent set of
+# docker run flags.
+
+services:
+  antinode:
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:uid=10001,gid=10001,mode=0700
