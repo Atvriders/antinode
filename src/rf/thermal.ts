@@ -30,6 +30,9 @@ import type { ThermalNodeDef, ThermalState } from './types'
 /** The node the fan blows on, and the one the fan curve reads. */
 const HEATSINK_ID = 'pa-heatsink'
 
+/** The node the finals dissipate into; used to detect that the radio is transmitting. */
+const PA_NODE_ID = 'pa-junction'
+
 /**
  * Damage accumulates at this rate per second when the node is 10 degC over its
  * damage threshold. Chosen so a badly abused part fails in minutes rather than
@@ -69,8 +72,14 @@ export const THERMAL_NODES: readonly ThermalNodeDef[] = [
     id: 'pa-flange',
     label: 'Final device flanges',
     capacityJPerK: 5,
-    // Flange, thermal pad and the screwed joint into the heatsink.
-    resistanceKPerW: 0.35,
+    /*
+     * Flange to heatsink through the thermal sheet, for the pair. The service
+     * manual lists MP52, a 26 x 37 mm TC-200CAS sheet under the devices — a good
+     * interface over a large area, so this path is small next to the 1.0 degC/W
+     * of junction-to-case inside each device, which is what actually sets how
+     * far the die runs above the metal.
+     */
+    resistanceKPerW: 0.05,
     parent: HEATSINK_ID,
     warnC: 100,
     criticalC: 120,
@@ -78,15 +87,35 @@ export const THERMAL_NODES: readonly ThermalNodeDef[] = [
   },
   {
     id: HEATSINK_ID,
-    label: 'PA heatsink',
-    // About 400 g of extruded aluminium at 0.9 J/gK.
-    capacityJPerK: 360,
-    // Still air; stepThermal scales this down as the fan comes up. Sized so a
-    // matched 100 W key-down with the fan running settles near 125 degC at the
-    // junction — hot, eventually power-limited, not instantly destroyed — and so
-    // that the same load with the fan blocked climbs to the shutdown threshold,
-    // which is what actually happens to a radio with a clogged grille.
-    resistanceKPerW: 0.38,
+    label: 'Chassis casting',
+    /*
+     * The die-cast chassis. Not a heatsink — this radio does not have one for
+     * its finals.
+     *
+     * The service manual's parts list gives the driver and both finals as plain
+     * FET entries with no board coordinates, because they are not board-plane
+     * parts: they bolt straight into threaded bosses in the casting with thermal
+     * compound. A repair account of the same job describes wiping the old
+     * compound off the chassis bosses before refitting them, and notes how hard
+     * the devices are to unsolder "because of the heat-sinking property of the
+     * chassis".
+     *
+     * That is why the radio heats slowly. An earlier version of this model gave
+     * the finals 400 g of imaginary fins, which saturate in a couple of minutes
+     * and had a digital transmission past the warning point ten seconds in. The
+     * real mass is a large fraction of a 4.2 kg casting, cabinet-coupled.
+     */
+    capacityJPerK: 1250,
+    /*
+     * Still air; stepThermal scales this down as the fan comes up.
+     *
+     * Calibrated against the only published instrumented measurement: VA7OJ
+     * recorded a 33 degC average case temperature rising to 35 degC at the
+     * hottest point after several minutes of key-down at 100 W, with the
+     * radio's own temperature gauge still in its normal range. With the fan at
+     * its transmit duty that is a rise of roughly 15 K on about 115 W.
+     */
+    resistanceKPerW: 0.32,
     parent: null,
     warnC: 60,
     criticalC: 80,
@@ -167,13 +196,31 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
  * temperature with no memory. The real radio also spins the fan whenever it is
  * transmitting regardless of temperature, which is the caller's business.
  */
-export const fanDutyFor = (heatsinkC: number): number => {
-  if (!Number.isFinite(heatsinkC)) return 0
-  if (heatsinkC >= 70) return 1
-  if (heatsinkC >= 60) return 0.85
-  if (heatsinkC >= 50) return 0.6
-  if (heatsinkC >= 40) return 0.35
-  return 0
+/**
+ * Fan duty, 0..1.
+ *
+ * Temperature is not the only input. The IC-7300 runs its fan while it is
+ * transmitting, not only once something has got hot, and modelling it as purely
+ * thermostatic left the first half-minute of every transmission with no forced
+ * cooling at all — which is exactly the half-minute someone watching a digital
+ * mode is looking at. Transmitting sets a floor; heat takes it the rest of the
+ * way.
+ */
+export const fanDutyFor = (heatsinkC: number, transmitting = false): number => {
+  // Confirmed by owners and by the reviewer who measured this radio: the fan
+  // comes on with PTT, at any power level, and it is loud — it is the single
+  // most common complaint about the IC-7300, and Icom's own marketing for the
+  // successor boasts that "the fan control has been improved". It is not a
+  // thermostat that spools up once something is hot.
+  const floor = transmitting ? 0.85 : 0
+  if (!Number.isFinite(heatsinkC)) return floor
+  const thermostatic =
+    heatsinkC >= 70 ? 1
+    : heatsinkC >= 60 ? 0.85
+    : heatsinkC >= 50 ? 0.6
+    : heatsinkC >= 40 ? 0.35
+    : 0
+  return Math.max(floor, thermostatic)
 }
 
 /**
@@ -232,6 +279,16 @@ export const stepThermal = (
 ): ThermalState => {
   const ambient = Number.isFinite(state.ambientC) ? state.ambientC : 25
 
+  /*
+   * Whether the radio is transmitting, inferred from the heat arriving at the
+   * finals rather than passed in separately: the fan runs on transmit, and heat
+   * in the PA is what transmitting means here. The threshold is well above the
+   * numerical noise of an idle stage and well below anything the finals produce
+   * with drive on them.
+   */
+  const paHeat = powerIn[PA_NODE_ID]
+  const transmitting = typeof paHeat === 'number' && Number.isFinite(paHeat) && paHeat > 5
+
   const temps: Record<string, number> = {}
   const damage: Record<string, number> = {}
   for (const node of THERMAL_NODES) {
@@ -242,12 +299,12 @@ export const stepThermal = (
   }
 
   if (!Number.isFinite(dt) || dt <= 0) {
-    return { temps, damage, ambientC: ambient, fan: fanDutyFor(temps[HEATSINK_ID] ?? ambient) }
+    return { temps, damage, ambientC: ambient, fan: fanDutyFor(temps[HEATSINK_ID] ?? ambient, transmitting) }
   }
 
   const steps = Math.min(MAX_SUBSTEPS, Math.max(1, Math.ceil(dt / MAX_SUB_DT)))
   const h = dt / steps
-  let fan = fanDutyFor(temps[HEATSINK_ID] ?? ambient)
+  let fan = fanDutyFor(temps[HEATSINK_ID] ?? ambient, transmitting)
 
   const next: Record<string, number> = {}
   for (let s = 0; s < steps; s += 1) {
@@ -278,7 +335,7 @@ export const stepThermal = (
       if (typeof t === 'number' && Number.isFinite(t)) temps[node.id] = t
     }
 
-    fan = fanDutyFor(temps[HEATSINK_ID] ?? ambient)
+    fan = fanDutyFor(temps[HEATSINK_ID] ?? ambient, transmitting)
 
     if (allowDamage) {
       for (const node of THERMAL_NODES) {

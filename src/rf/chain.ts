@@ -621,7 +621,12 @@ function solveStationInner(raw: StationConfig, thermal: ThermalState): StationSo
       // not use that: the duty lives in the envelope, which is sampled every
       // frame, and averaging happens in the thermal network. See modeEnvelope().
       duty: 1,
-      paTempC,
+      // The protection circuit reads a thermistor on the PA board, not a sensor
+      // inside the devices, so that is what decides whether it acts. The die
+      // temperature is still computed, reported and used by the damage model —
+      // it is the temperature that matters physically — but a radio cannot
+      // protect against what it cannot see, and this one sees the board.
+      paTempC: tempOf(thermal, HEATSINK_NODE),
       damage: paDamage,
     }),
     radioMatch.gammaMag,

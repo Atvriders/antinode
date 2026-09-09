@@ -75,18 +75,21 @@ describe('the network', () => {
 
 describe('steady state', () => {
   it('matches the analytic value: rise = power x sum of the resistances to ambient', () => {
-    // 10 W keeps the heatsink under 40 degC, so the fan stays off and the
-    // resistances are exactly the ones in the table.
-    const s = run(initialThermalState(AMBIENT), { 'pa-junction': 10 }, 6000, 10)
+    // 4 W is below the threshold at which the model concludes the radio is
+    // transmitting, so the fan stays off and the resistances are exactly the
+    // ones in the table. Anything higher brings the transmit fan floor in and
+    // the heatsink's resistance to air is no longer the tabulated one.
+    const P = 4
+    const s = run(initialThermalState(AMBIENT), { 'pa-junction': P }, 20_000, 10)
     const j = nodeById('pa-junction')
     const f = nodeById('pa-flange')
     const h = nodeById('pa-heatsink')
-    const expected = AMBIENT + 10 * (j.resistanceKPerW + f.resistanceKPerW + h.resistanceKPerW)
+    const expected = AMBIENT + P * (j.resistanceKPerW + f.resistanceKPerW + h.resistanceKPerW)
 
     expect(s.fan).toBe(0)
-    expect(tempOf(s, 'pa-heatsink')).toBeCloseTo(AMBIENT + 10 * h.resistanceKPerW, 4)
-    expect(tempOf(s, 'pa-flange')).toBeCloseTo(AMBIENT + 10 * (f.resistanceKPerW + h.resistanceKPerW), 4)
-    expect(tempOf(s, 'pa-junction')).toBeCloseTo(expected, 4)
+    expect(tempOf(s, 'pa-heatsink')).toBeCloseTo(AMBIENT + P * h.resistanceKPerW, 3)
+    expect(tempOf(s, 'pa-flange')).toBeCloseTo(AMBIENT + P * (f.resistanceKPerW + h.resistanceKPerW), 3)
+    expect(tempOf(s, 'pa-junction')).toBeCloseTo(expected, 3)
   })
 
   it('leaves untouched nodes at ambient', () => {
@@ -96,11 +99,13 @@ describe('steady state', () => {
   })
 
   it('gets uncomfortably hot on a key-down carrier, which is the point', () => {
-    // 100 W is what the finals dissipate making 100 W at the 50 % overall
-    // efficiency the PA model uses, which is the figure that reconciles with
-    // Icom's published 21 A maximum.
+    // 100 W is what the finals dissipate making 100 W out, which reconciles with
+    // the 16.6 A measured at 14.1 MHz. The die settles well above the metal and
+    // well below its 175 degC maximum: hard-working, not in danger. That is the
+    // point — the devices are two 70 W parts making 100 W between them.
     const s = run(initialThermalState(AMBIENT), { 'pa-junction': 100 }, 6000, 10)
-    expect(tempOf(s, 'pa-junction')).toBeGreaterThan(100)
+    expect(tempOf(s, 'pa-junction')).toBeGreaterThan(85)
+    expect(tempOf(s, 'pa-junction')).toBeLessThan(120)
     expect(tempOf(s, 'pa-junction')).toBeLessThan(nodeById('pa-junction').damageC)
     expect(s.fan).toBeGreaterThan(0.5)
   })
@@ -163,18 +168,38 @@ describe('fanDutyFor', () => {
     expect(fanDutyFor(Number.NaN)).toBe(0)
   })
 
-  it('cools the heatsink faster once it runs', () => {
-    const still = run(initialThermalState(AMBIENT), { 'pa-junction': 10 }, 6000, 10)
-    const forced = run(initialThermalState(AMBIENT), { 'pa-junction': 60 }, 6000, 10)
-    const h = nodeById('pa-heatsink')
-    expect(still.fan).toBe(0)
-    expect(forced.fan).toBeGreaterThan(0)
-    // Six times the power gives well under six times the rise, because the fan
-    // came on and cut the heatsink's resistance to air.
-    const stillRise = tempOf(still, 'pa-heatsink') - AMBIENT
-    const forcedRise = tempOf(forced, 'pa-heatsink') - AMBIENT
-    expect(forcedRise).toBeLessThan(6 * stillRise)
-    expect(forcedRise).toBeLessThan(60 * h.resistanceKPerW)
+  it('runs on transmit, before anything has had time to get hot', () => {
+    // The IC-7300 runs its fan while it transmits rather than waiting for a
+    // thermostat. Modelling it as purely thermostatic left the first half minute
+    // of every transmission with no forced cooling — which is precisely the half
+    // minute someone watching a digital mode is looking at, and it made the
+    // finals pass their warning point ten seconds in.
+    const justKeyed = run(initialThermalState(AMBIENT), { 'pa-junction': 100 }, 2, 0.05)
+    expect(tempOf(justKeyed, 'pa-heatsink')).toBeLessThan(AMBIENT + 2)
+    expect(justKeyed.fan).toBeGreaterThan(0.3)
+
+    // With the key up it stops.
+    const idle = run(initialThermalState(AMBIENT), {}, 2, 0.05)
+    expect(idle.fan).toBe(0)
+  })
+
+  it('steps up beyond the transmit floor only when something is genuinely hot', () => {
+    // Tested directly rather than through a soak: on this radio the transmit
+    // floor covers everything the PA can do to itself at rated output, so the
+    // thermostatic steps above it only appear in abuse cases like a blocked
+    // grille. That is the correct behaviour, and it is why a soak cannot reach
+    // them.
+    expect(fanDutyFor(30, true)).toBeCloseTo(0.85, 6)
+    expect(fanDutyFor(45, true)).toBeCloseTo(0.85, 6)
+    expect(fanDutyFor(75, true)).toBe(1)
+    expect(fanDutyFor(75, false)).toBe(1)
+    expect(fanDutyFor(30, false)).toBe(0)
+  })
+
+  it('never runs slower on transmit than it would on temperature alone', () => {
+    for (const t of [20, 35, 45, 55, 65, 75, 90]) {
+      expect(fanDutyFor(t, true)).toBeGreaterThanOrEqual(fanDutyFor(t, false))
+    }
   })
 })
 
@@ -215,9 +240,13 @@ describe('damageRate', () => {
 
 describe('damage accumulation', () => {
   /** Hard on the devices, but not so hard that the damage figure pins instantly. */
-  const hard = { 'pa-junction': 180 }
+  // With the chassis mass lumped into the heatsink and the fan running on
+  // transmit, the finals survive continuous rated output. These are abuse
+  // figures, well past anything the radio can actually ask of them, chosen so
+  // the junction genuinely clears its damage threshold.
+  const hard = { 'pa-junction': 260 }
   /** Straightforwardly fatal. */
-  const fatal = { 'pa-junction': 260 }
+  const fatal = { 'pa-junction': 600 }
 
   it('does not accumulate when damage is switched off', () => {
     const s = run(initialThermalState(AMBIENT), hard, 120, 0.25, false)
@@ -234,9 +263,9 @@ describe('damage accumulation', () => {
   })
 
   it('is permanent: cooling the radio down does not undo it', () => {
-    // 180 W is hard on the devices but not instantly fatal, so the damage figure
-    // lands somewhere useful between nothing and destroyed.
-    const hurt = run(initialThermalState(AMBIENT), { 'pa-junction': 180 }, 30, 0.25, true)
+    // Hard on the devices but not instantly fatal, so the damage figure lands
+    // somewhere useful between nothing and destroyed.
+    const hurt = run(initialThermalState(AMBIENT), hard, 30, 0.25, true)
     expect(damageOf(hurt, 'pa-junction')).toBeGreaterThan(0)
     expect(damageOf(hurt, 'pa-junction')).toBeLessThan(1)
 
@@ -269,12 +298,14 @@ describe('integration is stable', () => {
   })
 
   it('does not ring or overshoot with an absurdly long step', () => {
-    const oneBigStep = stepThermal(initialThermalState(AMBIENT), { 'pa-junction': 10 }, 5000, false)
-    const manySmall = run(initialThermalState(AMBIENT), { 'pa-junction': 10 }, 5000, 10)
+    // Below the transmit threshold, so the fan is out of the comparison and the
+    // analytic ceiling is exactly the tabulated one.
+    const oneBigStep = stepThermal(initialThermalState(AMBIENT), { 'pa-junction': 4 }, 20_000, false)
+    const manySmall = run(initialThermalState(AMBIENT), { 'pa-junction': 4 }, 20_000, 10)
     const j = nodeById('pa-junction')
     const f = nodeById('pa-flange')
     const h = nodeById('pa-heatsink')
-    const ceiling = AMBIENT + 10 * (j.resistanceKPerW + f.resistanceKPerW + h.resistanceKPerW)
+    const ceiling = AMBIENT + 4 * (j.resistanceKPerW + f.resistanceKPerW + h.resistanceKPerW)
     expect(tempOf(oneBigStep, 'pa-junction')).toBeLessThanOrEqual(ceiling + 1e-6)
     expect(tempOf(manySmall, 'pa-junction')).toBeCloseTo(ceiling, 3)
   })

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Bench } from './Bench'
 import { Ground } from './Ground'
-import { AntennaModel } from './Antennas'
+import { AntennaModel, radiationOrigin } from './Antennas'
 import { Wavefronts } from '../fx/Wavefronts'
 import { DIORAMA } from '../scene-constants'
 import type { AntennaId } from '../../rf/types'
@@ -32,10 +32,9 @@ export function Station({ antennaId, params, radiation, matchHeat, wavelengthM, 
     return typeof n === 'number' && Number.isFinite(n) ? n : 0
   }, [antennaId, params])
 
-  const feedHeight = useMemo(() => {
-    const h = params['height']
-    return typeof h === 'number' && Number.isFinite(h) ? h : 8
-  }, [params])
+  // Where the waves leave from. Per antenna, and never clamped: a Yagi raised to
+  // the top of its range must radiate from the top of its mast.
+  const origin = useMemo(() => radiationOrigin(antennaId, params), [antennaId, params])
 
   return (
     <group>
@@ -45,7 +44,7 @@ export function Station({ antennaId, params, radiation, matchHeat, wavelengthM, 
         <group position={[0, DIORAMA.plinth.h, 0]}>
           <AntennaModel id={antennaId} params={params} radiation={radiation} matchHeat={matchHeat} />
           <Wavefronts
-            origin={[0, Math.min(0.5, feedHeight * DIORAMA.scale), 0]}
+            origin={origin}
             strength={radiation}
             wavelengthM={wavelengthM}
             reducedMotion={reducedMotion}

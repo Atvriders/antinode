@@ -115,17 +115,20 @@ describe('protectionFor', () => {
     }
   })
 
-  it('shuts down at the absolute maximum channel temperature', () => {
-    // Confirmed: Tch maximum is 175 degC for the RD100HHF1.
-    const hot = protectionFor({ ...quiet, paTempC: 180 })
+  it('shuts down at the top of the sensor range', () => {
+    // The thresholds are referred to the NTC thermistor on the PA board, which
+    // is what the radio's protection actually reads. Icom publish the two-step
+    // mechanism — power down, then transmit inhibit — but no temperatures, so
+    // these are representative.
+    const hot = protectionFor({ ...quiet, paTempC: 100 })
     expect(hot.foldback).toBe(0)
     expect(hot.level).toBe('shutdown')
     expect(hot.tempTriggered).toBe(true)
-    expect(hot.reasons[0] ?? '').toContain('175')
+    expect(hot.reasons[0] ?? '').toContain('100')
   })
 
-  it('starts reducing power above the recommended channel temperature', () => {
-    const warm = protectionFor({ ...quiet, paTempC: 150 })
+  it('starts reducing power once the PA board is hot', () => {
+    const warm = protectionFor({ ...quiet, paTempC: 88 })
     expect(warm.foldback).toBeLessThan(1)
     expect(warm.foldback).toBeGreaterThan(0)
     expect(warm.tempTriggered).toBe(true)

@@ -60,14 +60,37 @@ loss changes what the meter reads.
   published matching limits. The match it finds is therefore slightly better than
   a real ATU would manage, and the tune time is a fixed representative delay.
 - **The thermal network.** A lumped resistance-capacitance chain — junction,
-  flange, heatsink, air — with separate small nodes for the parts that a
-  mismatch actually reaches. The time constants are chosen so a junction responds
-  in well under a second and a heatsink takes minutes, which is the behaviour that
-  matters pedagogically. They are not measured values from a real IC-7300.
+  flange, heatsink, air — with separate small nodes for the parts that a mismatch
+  actually reaches. The heatsink node represents the heatsink *and* the die-cast
+  chassis it is bolted into, which is a real thermal path and dominates the slow
+  end of the curve.
+
+  It is calibrated against the only published instrumented measurement of this
+  radio: Adam Farson's evaluation report, which records the case at 33 °C average
+  and 35 °C at the hottest point after several minutes of key-down at 100 W with
+  the TEMP gauge still in its normal range, and 16.6 A drawn at 14.1 MHz. The
+  model reproduces both. `tests/thermalrates.test.ts` pins them, so a change that
+  drifts away from the evidence fails.
+
+  Two consequences worth stating, because they are the behaviour and not an
+  accident. The fan runs at near-full speed from the instant of key-up, as this
+  radio's does — it is not thermostatic. And the protection circuit is fed the
+  temperature of the sensor on the PA board, because that is the thermistor the
+  real radio reads; the die temperature is computed and shown, but the radio
+  cannot see it, and a model that protects on the die trips minutes before a real
+  one would.
+
+  Icom publish no duty-cycle derating, no protection thresholds and an unmarked
+  TEMP scale, so the thresholds themselves are representative.
 - **Damage.** Accumulates above a per-component threshold at a rate that roughly
   doubles every ten degrees. It is a teaching device: it makes "a bit too hot for
   a long time" and "far too hot briefly" visibly different. It is not a
   reliability prediction.
+- **The heatsink in the 3D model.** The scene draws a finned extrusion at the
+  rear, which is a readable shorthand rather than the truth: the IC-7300's
+  finals bolt directly into bosses in the die-cast chassis and there is no
+  dedicated PA heatsink. The thermal model is built on the real arrangement —
+  the mass is the casting — and the part's page says so.
 - **Internal component designations.** Icom publishes the finals and the headline
   specifications; it does not publish a full parts list. Where a designator is not
   public, the part carries an empty designation and the Handbook page says the

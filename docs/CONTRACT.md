@@ -273,7 +273,8 @@ The end-to-end suite drives the app through these. Every one is mandatory; put
 | `readout-forward` | forward power |
 | `readout-reflected` | reflected power |
 | `readout-radiated` | radiated power |
-| `readout-patemp` | PA temperature |
+| `readout-patemp` | the temperature the radio's own TEMP meter reads: the sensor on the PA assembly, not the die |
+| `readout-die` | the finals' channel temperature, which responds in a fraction of a second and is what the damage model uses |
 | `stage-<stageId>` | each row of the chain rail |
 | `part-<partId>` | each part row in the breakdown list |
 | `handbook` | the Handbook card |

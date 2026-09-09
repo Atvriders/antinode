@@ -377,3 +377,76 @@ function Yagi({ driven, height }: { driven: number; height: number }) {
     </group>
   )
 }
+
+/**
+ * Where each antenna actually radiates from, in plinth-local metres.
+ *
+ * The wavefronts have to leave the antenna, not a fixed point above the plinth.
+ * An earlier version took the `height` parameter and clamped it, which pinned
+ * the origin at the equivalent of seven metres: raising a Yagi past that left
+ * the waves coming out of the empty air where the antenna used to be, and every
+ * antenna without a `height` parameter — the mag loop, the mobile whips, the
+ * dummy load — radiated from the ground.
+ *
+ * This lives beside the models rather than in Station so the two cannot drift:
+ * if a model's geometry moves, this is in the same file and moves with it.
+ */
+export function radiationOrigin(
+  id: AntennaId,
+  params: Readonly<Record<string, number>>,
+): [number, number, number] {
+  const height = p(params, 'height', 10)
+  const h = height * S
+
+  switch (id) {
+    case 'dummy-load':
+      // It does not radiate. The origin only has to be somewhere sensible.
+      return [0, 0.03, 0]
+
+    case 'dipole-40':
+    case 'dipole-20':
+    case 'fan-dipole':
+    case 'g5rv':
+      // Fed at the centre of the flat top.
+      return [0, h, 0]
+
+    case 'ocf-windom': {
+      const l = p(params, 'length', 20.1) * S
+      const offset = Math.max(0.05, Math.min(0.95, p(params, 'offset', 1 / 3)))
+      return [-l / 2 + l * offset, 11 * S, 0]
+    }
+
+    case 'efhw-40': {
+      // A sloping wire radiates along its length; the middle is the fair point.
+      const l = p(params, 'length', 20.7) * S
+      return [l / 2, (0.07 + 11 * S) / 2, 0]
+    }
+
+    case 'random-wire-9to1': {
+      const l = p(params, 'length', 18) * S
+      return [(l * 0.8) / 2, (0.05 + 9 * S) / 2, (l * 0.2) / 2]
+    }
+
+    case 'vertical-quarter-40':
+    case 'vertical-multiband':
+      // A quarter-wave vertical's current maximum is at its base; the radiating
+      // centre of the whole radiator sits around a third of the way up.
+      return [0, h * 0.35, 0]
+
+    case 'mag-loop': {
+      const r = (p(params, 'diameter', 1) * S) / 2
+      return [0, r + 0.03, 0]
+    }
+
+    case 'mobile-whip-20':
+    case 'screwdriver-mobile':
+      // Above the vehicle, around the loading coil where the current is highest.
+      return [0.07, 0.03 + h * 0.3, 0]
+
+    case 'yagi-3el-20':
+      return [0, h, 0]
+
+    default:
+      return [0, h, 0]
+  }
+}

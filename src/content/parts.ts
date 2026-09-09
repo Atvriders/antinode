@@ -330,12 +330,12 @@ export const PARTS: readonly PartDef[] = [
   // ── Heatsink and airflow (Icom lists both as chassis parts) ────────────────
   {
     id: 'pa-heatsink',
-    name: 'Main heatsink',
+    name: 'Chassis heat path',
     assembly: 'chassis',
-    part: 'MP51 (3765 MAIN HEATSINK-1)',
-    purpose: 'Carries the heat out of the finals and hands it to the airflow.',
+    part: 'MP1 (die-cast chassis)',
+    purpose: 'Takes the heat out of the finals. This radio has no separate PA heatsink.',
     detail:
-      'The finals bolt down to it through thermal sheets; Icom lists it as a chassis part rather than a PA part, because it is structural as well as thermal. The PA unit carries an NTC thermistor (R351) and feeds a heat-sense line to the main unit, which the radio uses to run the fan and to protect the finals. Nothing in an aluminium block wears out. What fails is the interface: a loose bolt or a dried thermal sheet shows as PA temperature climbing much faster than it used to for the same key-down.',
+      'The driver and both finals bolt straight into threaded bosses in the die-cast chassis with thermal compound — the service manual lists them without board coordinates, because they are not board-plane parts, and a repair account of the same job describes wiping the old compound off the chassis bosses before refitting them. The part called MAIN HEATSINK-1 belongs to the main board, not the PA. That is why the radio warms slowly: the mass carrying the heat is a large fraction of a 4.2 kg casting rather than a small extrusion, and the cabinet is coupled to it. The PA unit carries an NTC thermistor (R351) beside Q132 whose reading is what the radio protects on. Nothing in a casting wears out; what fails is the interface. A loose bolt or dried-out compound shows up as the temperature climbing much faster than it used to for the same key-down.',
     stages: ['final-pa'],
     stressKinds: [],
     failureMode: '',

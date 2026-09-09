@@ -139,6 +139,37 @@ are instantaneous envelope powers and SSB genuinely falls silent. They are
 printed as numbers rather than swept as needles, so they now hold their peak long
 enough to be compared with each other.
 
+## Found in the field, third round
+
+**The finals overheated far too quickly on a continuous-duty mode.** Reported by
+an owner running DATA at 100 W: the die passed its warning point ten seconds in
+and the radio had cut itself to 73 W inside two minutes. Real ones do not do
+that. Research against primary sources found four separate errors:
+
+- The heatsink was modelled as 400 g of aluminium floating in space. It is bolted
+  into a 4.2 kg die-cast chassis that the reviewer who measured this radio
+  explicitly describes as part of the heat path.
+- The fan was thermostatic and did nothing for the first half-minute. The real
+  one runs at near-full speed from the instant of key-up — it is the single most
+  common complaint about the radio and the reason people fit a quieter one.
+- The protection circuit was fed the junction temperature. The service manual
+  lists an NTC thermistor on the PA board; the radio protects on what it can
+  measure, which lags the die by tens of degrees and by minutes.
+- The mounting resistance was too high for a device sitting on a 26 × 37 mm
+  thermal sheet.
+
+Calibrated against the one instrumented measurement in public — 33 °C average
+case, 35 °C at the hottest point after several minutes of key-down at 100 W,
+16.6 A at 14.1 MHz — the model now reproduces both figures and holds full output
+indefinitely on a continuous carrier, which matches the complete absence of
+first-hand reports of this radio limiting itself in ordinary use.
+
+Also fixed: the radiated wavefronts left from a fixed point above the plinth
+rather than from the antenna, because the origin was the height parameter passed
+through a clamp. Raising a Yagi past the equivalent of seven metres left the
+waves coming out of empty air, and every antenna without a height parameter
+radiated from the ground.
+
 ## Known and open
 
 These were raised, are defensible, and are not fixed:
@@ -152,6 +183,11 @@ These were raised, are defensible, and are not fixed:
 - Component stresses are evaluated on the instantaneous envelope, so they can
   flicker between syllables. The standing wave itself uses the envelope peak.
 - The 3D model's rear panel is a plausible arrangement, not a measured one.
+- Nobody has published an instrumented run at 100 percent duty and full power to
+  thermal equilibrium — the measurement the model is anchored to is "several
+  minutes". Where the radio settles after an hour is inference, not evidence.
+- The protection thresholds are representative. Icom publish the two-step
+  mechanism and no temperatures.
 
 The honest statement of what is modelled and what is not is in
 [MODEL.md](MODEL.md); the sources are in [RESEARCH.md](RESEARCH.md).

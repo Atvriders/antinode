@@ -14,10 +14,21 @@ test('the thermal view shows the finals and the heatsink getting hot', async ({ 
   await page.getByTestId('view-tab-thermal').click()
   await page.getByTestId('ptt').click()
   await page.getByTestId('timescale-60').click()
-  await page.waitForTimeout(10_000)
 
-  const temp = Number(((await page.getByTestId('readout-patemp').textContent()) ?? '').replace(/[^0-9.-]/g, ''))
-  expect(temp, 'the finals should be well above ambient after ten minutes of key-down').toBeGreaterThan(45)
+  // Poll rather than wait a fixed time: how much simulated time a given number
+  // of real seconds buys depends on the frame rate, and under software rendering
+  // that varies a lot.
+  const sensor = async () =>
+    Number(((await page.getByTestId('readout-patemp').textContent()) ?? '').replace(/[^0-9.-]/g, ''))
+  await expect
+    .poll(sensor, { timeout: 90_000, intervals: [500] })
+    .toBeGreaterThan(33)
+
+  // The sensor on the PA assembly is not the die, and the gap between them is
+  // most of the point of the thermal view: the meter an operator watches sits
+  // tens of degrees below the temperature that actually decides the outcome.
+  const die = Number(((await page.getByTestId('readout-die').textContent()) ?? '').replace(/[^0-9.-]/g, ''))
+  expect(die).toBeGreaterThan((await sensor()) + 30)
 
   // The breakdown list carries a damage indicator per part with an accessible
   // name, so the heat is legible without relying on colour alone.

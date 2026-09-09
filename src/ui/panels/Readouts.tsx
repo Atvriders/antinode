@@ -72,6 +72,7 @@ export function Readouts() {
               label="Final die"
               value={fmtTemp(thermal.temps['pa-junction'] ?? 25)}
               tone={(thermal.temps['pa-junction'] ?? 25) > 120 ? 'bad' : undefined}
+              testid="readout-die"
             />
             <Split label="In the coax" value={fmtPower(meters.cableLossW)} tone={meters.cableLossW > meters.radiatedW * 0.25 ? 'bad' : undefined} />
             <Split label="In the tuner" value={fmtPower(meters.tunerLossW)} tone={meters.tunerLossW > 5 ? 'bad' : undefined} />

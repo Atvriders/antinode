@@ -134,14 +134,27 @@ const SWR_FOLDBACK_FLOOR = 0.5
 const MIN_SWR_FOLDBACK = 0.05
 
 /**
- * Channel (junction) temperature thresholds, degC.
- * TEMP_SHUTDOWN is confirmed: Tch absolute maximum 175 degC.
- * TEMP_LIMIT is confirmed as the manufacturer's recommendation: keep Tch below
- * 140 degC in normal use. The other two are representative.
+ * Temperature thresholds for the protection circuit, degC, measured WHERE THE
+ * RADIO MEASURES: on the PA board, not on the die.
+ *
+ * The service manual lists an NTC thermistor on the PA unit — a surface-mount
+ * part near the devices, not a sensor inside them. That distinction decides the
+ * whole character of the protection. The die responds in a fraction of a second
+ * and runs 60 degC above the metal; the board responds in minutes. A model that
+ * folds power back on the junction temperature trips almost immediately and
+ * reports a radio in trouble a minute into a digital transmission, which is not
+ * what these radios do: the one published instrumented test found the gauge
+ * still in its normal range after several minutes of key-down at full power.
+ *
+ * Icom publish the mechanism and not the numbers — the manual describes two
+ * steps, "power down transmission" showing LMT and then "TX inhibit", and the
+ * TEMP gauge is unmarked except for a red zone. These three are therefore
+ * representative, chosen so a healthy radio at continuous full output never
+ * reaches them and a blocked fan does.
  */
-const TEMP_WATCH = 120
-const TEMP_LIMIT = 140
-const TEMP_SHUTDOWN = 175
+const TEMP_WATCH = 65
+const TEMP_LIMIT = 80
+const TEMP_SHUTDOWN = 100
 
 /**
  * Drain current thresholds for the pair, A. Representative: the RD70HVF1 is
