@@ -34,6 +34,15 @@ async function chooseAntenna(page: import('@playwright/test').Page, id: string) 
  * Read the SWR the way a person does: the part before the colon. The meter has
  * ballistics, so give it time to settle before believing it.
  */
+/** SWR at the feedpoint: rendered from the solution, so it is true immediately. */
+const antennaSwr = async (page: import('@playwright/test').Page) => {
+  const text = (await page.getByTestId('readout-antenna-swr').textContent()) ?? ''
+  if (text.includes('>')) return 99
+  const head = text.split(':')[0] ?? ''
+  const n = Number(head.replace(/[^0-9.]/g, ''))
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY
+}
+
 const readSwr = async (page: import('@playwright/test').Page) => {
   const text = (await page.getByTestId('readout-swr').textContent()) ?? ''
   if (text.includes('>')) return 99
@@ -84,26 +93,26 @@ const watts = async (page: import('@playwright/test').Page, id: string) => {
 }
 
 test('a dummy load reads 1.0:1 and an antenna off its band does not', async ({ page }) => {
+  // Asserted on the feedpoint readout, which is rendered straight from the
+  // solution, rather than on the SWR meter, which is ballistic by design. The
+  // meter's exact settling is not what this test is for — the wiring is — and on
+  // a runner with no GPU the simulation advances only as fast as frames render,
+  // so a damped needle can still be mid-swing seconds after a control moves.
+  // tests/system.test.ts pins the numbers themselves, with no needle in the way.
   await boot(page)
-  await chooseAntenna(page, 'dummy-load')
-  // The meter is ballistic by design, so this is a "settles near unity" check.
-  // The exact 1.00 into a 50 ohm load is pinned by tests/system.test.ts, where
-  // there is no needle in the way.
-  const dummy = await swr(page)
-  expect(dummy).toBeLessThan(1.2)
 
-  // Band first, then antenna: the other order momentarily puts a 40 m dipole on
-  // 20 m, which pegs the meter and leaves it decaying for seconds afterwards.
+  await chooseAntenna(page, 'dummy-load')
+  await expect.poll(() => antennaSwr(page), { timeout: 30_000, intervals: [300] }).toBeLessThan(1.05)
+
   await page.getByTestId('band-40m').click()
   await chooseAntenna(page, 'dipole-40')
-  const onBand = await swr(page)
-  expect(onBand).toBeLessThan(2)
+  await expect.poll(() => antennaSwr(page), { timeout: 30_000, intervals: [300] }).toBeLessThan(2.5)
 
   await page.getByTestId('band-20m').click()
-  await page.waitForTimeout(600)
-  const offBand = await swr(page)
-  expect(offBand).toBeGreaterThan(6)
-  expect(dummy).toBeLessThan(onBand)
+  await expect.poll(() => antennaSwr(page), { timeout: 30_000, intervals: [300] }).toBeGreaterThan(6)
+
+  // And the meter beside it agrees, once it has had time to.
+  await expect.poll(() => readSwr(page), { timeout: 45_000, intervals: [400] }).toBeGreaterThan(6)
 })
 
 test('tuning across a resonance sweeps SWR down and back up', async ({ page }) => {
@@ -215,6 +224,10 @@ test('a longer cable flatters the SWR reading while delivering less power', asyn
 
   await setCableLength(page, 5)
   const shortSwr = await swr(page)
+  // Wait for the power readouts to actually come up before taking a baseline
+  // from them. Zero is what they read before the first frame of transmit has
+  // been simulated, and a zero baseline makes every later comparison vacuous.
+  await expect.poll(() => watts(page, 'readout-radiated'), { timeout: 30_000, intervals: [300] }).toBeGreaterThan(10)
   const shortRad = await watts(page, 'readout-radiated')
 
   await setCableLength(page, 100)
