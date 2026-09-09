@@ -1,0 +1,58 @@
+/* Annotation labels drawn over the 3D scene. Same silkscreen language as the
+   panels, so a label reads as part of the instrument rather than as a tooltip. */
+
+.wrapper { pointer-events: none; }
+
+.callout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(8px, -50%);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--phosphor);
+  box-shadow: 0 0 0 3px rgba(13, 17, 19, 0.75), 0 0 8px var(--phosphor-glow);
+  flex: none;
+}
+
+.text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 7px;
+  border-radius: var(--r-sm);
+  background: rgba(13, 17, 19, 0.82);
+  border: 1px solid var(--panel-line);
+  backdrop-filter: blur(3px);
+}
+
+.label {
+  font-family: var(--f-panel);
+  font-size: calc(10px * var(--ui-scale));
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk);
+}
+
+.value {
+  font-family: var(--f-num);
+  font-size: calc(10px * var(--ui-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--phosphor);
+}
+
+.callout[data-tone='signal'] .dot { background: var(--phosphor); }
+
+.callout[data-tone='hot'] .dot {
+  background: var(--heat-2);
+  box-shadow: 0 0 0 3px rgba(13, 17, 19, 0.75), 0 0 10px var(--heat-glow);
+}
+
+.callout[data-tone='hot'] .value { color: var(--heat-1); }

@@ -6,8 +6,11 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Radio } from '../three/radio/Radio'
 import { Station } from '../three/station/Station'
 import { Feedline } from '../three/fx/Feedline'
+import { Annotations } from '../three/fx/Annotations'
+import { EnergyFlow } from '../three/fx/EnergyFlow'
 import { CAMERAS } from '../three/scene-constants'
 import { STAGES } from '../content/stages'
+import { ANTENNAS } from '../rf/antennas'
 import { useStation } from '../sim/store'
 import styles from './App.module.css'
 
@@ -57,6 +60,7 @@ function SceneContents() {
   const view = useStation((s) => s.view)
   const showLabels = useStation((s) => s.showLabels)
   const showStandingWave = useStation((s) => s.showStandingWave)
+  const showEnergyFlow = useStation((s) => s.showEnergyFlow)
   const reducedMotion = useStation((s) => s.reducedMotion)
   const solution = useStation((s) => s.solution)
   const thermal = useStation((s) => s.thermal)
@@ -118,6 +122,26 @@ function SceneContents() {
         wavelengthM={299792458 / Math.max(config.freqHz, 1e5)}
         reducedMotion={reducedMotion}
       />
+
+      {/* The LABELS switch. Annotations are view-aware: the outside of the radio
+          wants its connectors named, the inside wants its boards named, and the
+          station wants the parts the numbers refer to. */}
+      {showLabels && (
+        <Annotations
+          view={view}
+          explode={explode}
+          dieTempC={thermal.temps['pa-junction'] ?? thermal.ambientC}
+          radiatedW={solution.radiatedW}
+          swr={solution.radioMatch.swr}
+          keyed={config.keyed}
+          antennaLabel={ANTENNAS[config.antennaId]?.short ?? 'Antenna'}
+        />
+      )}
+
+      {/* The FLOW switch, and the reason the signal-path view is called that. */}
+      {showEnergyFlow && view !== 'station' && (
+        <EnergyFlow stages={solution.stages} active={config.keyed} reducedMotion={reducedMotion} />
+      )}
 
       <Feedline
         profile={solution.standingWave}

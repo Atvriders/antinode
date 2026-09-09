@@ -47,7 +47,7 @@ const fresh = (): SimState => {
     config,
     thermal,
     solution,
-    meters: { poW: 0, swr: solution.radioMatch.swr, alc: 0, idA: 0, tempC: 25, sMeter: 0 },
+    meters: { poW: 0, swr: solution.radioMatch.swr, alc: 0, idA: 0, tempC: 25, sMeter: 0, radiatedW: 0, cableLossW: 0, tunerLossW: 0 },
     history: [],
     clock: 0,
     tunerBusy: false,

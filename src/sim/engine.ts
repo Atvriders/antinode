@@ -34,6 +34,12 @@ const BALLISTICS: Readonly<Record<string, { attack: number; decay: number }>> = 
   // quantity, so the meter barely filters it at all.
   temp: { attack: 0.4, decay: 0.4 },
   s: { attack: 0.05, decay: 0.6 },
+  // The power split is printed as figures, not swept as a needle, so it holds
+  // its peak for longer. On speech the underlying value falls to nothing between
+  // syllables; a number that blinks to zero every time the talker breathes
+  // cannot be compared with the number beside it, which is the whole reason
+  // these three are on screen together.
+  split: { attack: 0.05, decay: 1.6 },
 }
 
 /** One-pole filter with a different constant each way. */
@@ -77,14 +83,21 @@ export function stepSimulation(prev: SimState, ui: UiState, dtReal: number): Sim
   const thermal = stepThermal(prev.thermal, heatSources(solution), dt, config.allowDamage)
 
   // ── Meters ───────────────────────────────────────────────────────────────
-  const paTemp = thermal.temps['pa-junction'] ?? thermal.ambientC
   const meters = {
     poW: ballistic(prev.meters.poW, solution.pa.forwardW, dt, 'po'),
     swr: ballistic(prev.meters.swr, Math.min(solution.radioMatch.swr, 99), dt, 'swr'),
     alc: ballistic(prev.meters.alc, alcOf(solution), dt, 'alc'),
-    idA: ballistic(prev.meters.idA, solution.pa.supplyCurrentA, dt, 'id'),
-    tempC: ballistic(prev.meters.tempC, paTemp, dt, 'temp'),
+    // The ammeter reads the whole radio, and the TEMP meter reads the sensor on
+    // the PA assembly rather than the die. The die is the temperature that
+    // matters, and it is reported — but on a panel meter it would slam to over
+    // 100 degC within five seconds of keying and jitter with every syllable,
+    // which is not a thing anyone has watched a radio do.
+    idA: ballistic(prev.meters.idA, solution.radioSupplyCurrentA, dt, 'id'),
+    tempC: ballistic(prev.meters.tempC, solution.sensorTempC, dt, 'temp'),
     sMeter: ballistic(prev.meters.sMeter, 0, dt, 's'),
+    radiatedW: ballistic(prev.meters.radiatedW, solution.radiatedW, dt, 'split'),
+    cableLossW: ballistic(prev.meters.cableLossW, solution.cableLossW, dt, 'split'),
+    tunerLossW: ballistic(prev.meters.tunerLossW, solution.tunerLossW, dt, 'split'),
   }
 
   // ── The tuner's search ───────────────────────────────────────────────────
@@ -115,7 +128,10 @@ export function stepSimulation(prev: SimState, ui: UiState, dtReal: number): Sim
     const sample: HistorySample = {
       t: clock,
       swr: solution.radioMatch.swr,
-      paTempC: paTemp,
+      // The trace records the die, because that is the temperature that decides
+      // whether the radio survives; the meter shows the sensor, because that is
+      // the temperature an operator can see.
+      paTempC: thermal.temps['pa-junction'] ?? thermal.ambientC,
       forwardW: solution.pa.forwardW,
       reflectedW: solution.pa.reflectedW,
     }

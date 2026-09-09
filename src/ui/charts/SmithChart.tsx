@@ -146,14 +146,14 @@ export function SmithChart({
         {/* The centre is a perfect match. Everything else is not. */}
         <circle cx={cx} cy={cy} r={2} fill="var(--phosphor)" />
 
-        {placeMarkers(markers.map((m) => ({ ...m, xy: toXY(gamma(m.z)) }))).map((m, i) => (
+        {placeMarkers(markers.map((m) => ({ ...m, xy: toXY(gamma(m.z)) })), px).map((m, i) => (
           <g key={`${m.label}-${i}`}>
             <circle className={styles.marker} cx={m.xy[0]} cy={m.xy[1]} r={3.5} style={{ fill: m.tone ?? 'var(--smith)' }} />
             <line
               className={styles.gridFaint}
               x1={m.xy[0]}
               y1={m.xy[1]}
-              x2={m.labelAt[0] - 3}
+              x2={m.labelAt[0] + (m.anchor === 'end' ? 3 : -3)}
               y2={m.labelAt[1] - 3}
             />
             <text className={styles.markerLabel} x={m.labelAt[0]} y={m.labelAt[1]} textAnchor={m.anchor}>
@@ -190,18 +190,25 @@ interface Placed extends Marker {
  * hides the very comparison the chart is there to make, so labels are pushed
  * apart vertically and joined to their marker with a leader line.
  */
-function placeMarkers(markers: readonly (Marker & { xy: [number, number] })[]): Placed[] {
+function placeMarkers(
+  markers: readonly (Marker & { xy: [number, number] })[],
+  width: number,
+): Placed[] {
   const out: Placed[] = []
   for (const m of markers) {
     const [x, y] = m.xy
+    // A marker near the right edge — which is where an open circuit and every
+    // badly mismatched antenna ends up — would otherwise push its label off the
+    // chart and out of the panel. Flip it to the inside instead.
+    const flip = x + 8 + m.label.length * 5.2 > width
+    const lx = flip ? x - 7 : x + 7
     let ly = y + 3
-    // Step down until this label clears every one already placed.
     for (let guard = 0; guard < 8; guard++) {
-      const clash = out.some((p) => Math.abs(p.labelAt[1] - ly) < 11 && Math.abs(p.labelAt[0] - (x + 7)) < 70)
+      const clash = out.some((p) => Math.abs(p.labelAt[1] - ly) < 11 && Math.abs(p.labelAt[0] - lx) < 70)
       if (!clash) break
       ly += 12
     }
-    out.push({ ...m, labelAt: [x + 7, ly], anchor: 'start' })
+    out.push({ ...m, labelAt: [lx, ly], anchor: flip ? 'end' : 'start' })
   }
   return out
 }

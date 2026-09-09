@@ -415,6 +415,17 @@ export interface StationSolution {
   readonly cableLossW: number
   /** Power turned into heat in the tuner, W. */
   readonly tunerLossW: number
+  /**
+   * Current drawn from the 13.8 V supply by the WHOLE radio: the finals, the
+   * driver chain ahead of them, and the display, receiver and fan that run
+   * whatever the transmitter is doing.
+   *
+   * pa.supplyCurrentA is the finals alone. The number on a station ammeter, and
+   * the one Icom publishes a maximum for, is this one.
+   */
+  readonly radioSupplyCurrentA: number
+  /** Temperature the radio's own TEMP sensor reads, degC. See the note in chain.ts. */
+  readonly sensorTempC: number
   readonly standingWave: StandingWaveProfile
   readonly stages: readonly StageState[]
   readonly stresses: readonly ComponentStress[]

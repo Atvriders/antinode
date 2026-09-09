@@ -17,6 +17,7 @@ export function Readouts() {
   const meters = useStation((s) => s.meters)
   const solution = useStation((s) => s.solution)
   const events = useStation((s) => s.events)
+  const thermal = useStation((s) => s.thermal)
   const keyed = useStation((s) => s.config.keyed)
 
   const p = solution.pa.protection
@@ -44,14 +45,36 @@ export function Readouts() {
             <Meter label="PO" value={meters.poW} max={110} unit={fmtPower(meters.poW)} testid="readout-forward" ramp="phosphor" breakpoint={0.92} />
             <Meter label="REF" value={solution.pa.reflectedW} max={110} unit={fmtPower(solution.pa.reflectedW)} testid="readout-reflected" ramp="heat" breakpoint={0.2} />
             <Meter label="ALC" value={meters.alc} max={1} unit={fmtPercent(meters.alc)} ramp="phosphor" breakpoint={0.55} />
-            <Meter label="ID" value={meters.idA} max={25} unit={`${meters.idA.toFixed(1)} A`} ramp="phosphor" breakpoint={0.88} />
-            <Meter label="TEMP" value={meters.tempC} max={160} unit={fmtTemp(meters.tempC)} testid="readout-patemp" ramp="heat" breakpoint={0.56} />
+            <Meter
+            label="ID"
+            value={meters.idA}
+            max={25}
+            unit={`${meters.idA.toFixed(1)} A`}
+            ramp="phosphor"
+            breakpoint={0.84}
+            title="Whole-radio supply current. Icom specify 21 A maximum"
+          />
+            <Meter
+            label="TEMP"
+            value={meters.tempC}
+            max={100}
+            unit={fmtTemp(meters.tempC)}
+            testid="readout-patemp"
+            ramp="heat"
+            breakpoint={0.6}
+            title="The sensor on the PA assembly, which is what the radio's own meter reads"
+          />
           </div>
 
           <div className={styles.split}>
-            <Split label="Radiated" value={fmtPower(solution.radiatedW)} testid="readout-radiated" />
-            <Split label="In the coax" value={fmtPower(solution.cableLossW)} tone={solution.cableLossW > solution.radiatedW * 0.25 ? 'bad' : undefined} />
-            <Split label="In the tuner" value={fmtPower(solution.tunerLossW)} tone={solution.tunerLossW > 5 ? 'bad' : undefined} />
+            <Split label="Radiated" value={fmtPower(meters.radiatedW)} testid="readout-radiated" />
+            <Split
+              label="Final die"
+              value={fmtTemp(thermal.temps['pa-junction'] ?? 25)}
+              tone={(thermal.temps['pa-junction'] ?? 25) > 120 ? 'bad' : undefined}
+            />
+            <Split label="In the coax" value={fmtPower(meters.cableLossW)} tone={meters.cableLossW > meters.radiatedW * 0.25 ? 'bad' : undefined} />
+            <Split label="In the tuner" value={fmtPower(meters.tunerLossW)} tone={meters.tunerLossW > 5 ? 'bad' : undefined} />
             <Split label="Line loss" value={fmtDb(solution.line.totalLossDb)} />
             <Split label="Of which SWR" value={fmtDb(solution.line.excessLossDb)} tone={solution.line.excessLossDb > 1 ? 'bad' : undefined} />
           </div>
@@ -100,7 +123,7 @@ export function Readouts() {
 }
 
 function Meter({
-  label, value, max, unit, ramp, breakpoint, testid,
+  label, value, max, unit, ramp, breakpoint, testid, title,
 }: {
   label: string
   value: number
@@ -109,9 +132,10 @@ function Meter({
   ramp: 'phosphor' | 'heat'
   breakpoint: number
   testid?: string
+  title?: string
 }) {
   return (
-    <div className={styles.meterRow}>
+    <div className={styles.meterRow} title={title}>
       <span className={styles.meterLabel}>{label}</span>
       <Bar value={value} max={max} ramp={ramp} breakpoint={breakpoint} segments={24} label={label} />
       <span

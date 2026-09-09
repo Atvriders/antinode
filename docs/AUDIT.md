@@ -103,6 +103,42 @@ healthcheck goes healthy, the application and the SPA fallback are served, a
 self-hosted font is served, the process is not root, and the security headers
 survive on a cached asset, which is where nginx drops them.
 
+## Found in the field, second round
+
+Reported from a live deployment, and all confirmed:
+
+**The TEMP meter was showing the die.** The junction has a time constant of about
+a tenth of a second — it genuinely does reach 108 degC five seconds after keying,
+and it genuinely does swing with every syllable. But no operator has ever watched
+a radio do that, because the meter reads a thermistor bolted to a few hundred
+grams of aluminium. The meter now shows that sensor, which moves over minutes;
+the die is reported beside it, labelled, because it is still the temperature that
+decides whether the radio survives.
+
+**The ammeter was showing the finals, not the radio.** 14.5 A against Icom's
+published 21 A maximum and the 16.6 A measured independently. The driver chain
+and the housekeeping load are now counted, which lands it on 16.6 A.
+
+**Two switches did nothing.** `LABELS` was threaded all the way to the scene and
+never read; the component `FLOW` was meant to drive was never written, because
+the agent building it died mid-run and the gap was never noticed. Both are real
+now — annotations that name what the numbers refer to, and energy markers whose
+count follows the actual level at each stage, so the audio side is a trickle and
+the run to the antenna is a flood.
+
+**The camera fought the viewer**, a drag counted as a click on whatever was under
+it, and hovering flooded the whole case with emissive cyan. All three are fixed
+and covered by tests that drive a real drag.
+
+**The feedline went amber at 1.4:1.** A well-matched line is not "slightly hot",
+and colouring it as though it were tells the reader that an ordinary station is
+in trouble. Nothing enters the heat ramp below about 2:1 now.
+
+**The power split flickered to zero between syllables**, because those figures
+are instantaneous envelope powers and SSB genuinely falls silent. They are
+printed as numbers rather than swept as needles, so they now hold their peak long
+enough to be compared with each other.
+
 ## Known and open
 
 These were raised, are defensible, and are not fixed:

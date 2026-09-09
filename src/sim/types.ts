@@ -33,6 +33,18 @@ export interface UiState {
 export interface MeterState {
   /** Ballistic (damped) meter readings, so needles behave like real meters. */
   readonly poW: number
+  /**
+   * The power split, damped the same way.
+   *
+   * These are instantaneous envelope powers in the solution, which on speech
+   * swing to zero between syllables. Printed raw they flicker uselessly — a
+   * "radiated" figure that reads 0 W every time the talker draws breath cannot
+   * be compared with anything. A peak-reading wattmeter is what an operator
+   * actually watches, so these follow the same ballistics as PO.
+   */
+  readonly radiatedW: number
+  readonly cableLossW: number
+  readonly tunerLossW: number
   readonly swr: number
   readonly alc: number
   readonly idA: number

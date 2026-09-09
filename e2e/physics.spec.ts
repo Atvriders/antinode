@@ -198,6 +198,10 @@ test('a longer cable flatters the SWR reading while delivering less power', asyn
   await chooseAntenna(page, 'dipole-20')
   await page.getByTestId('band-20m').click()
   await page.getByTestId('cable-rg58').click()
+  // A constant-envelope mode on purpose. The claim is about the cable, and SSB
+  // genuinely falls silent between syllables, so measuring it on speech means
+  // measuring whether the sample landed on a word.
+  await page.getByTestId('mode-FM').click()
   await page.getByTestId('ptt').click()
 
   await setCableLength(page, 5)
@@ -205,15 +209,21 @@ test('a longer cable flatters the SWR reading while delivering less power', asyn
   const shortRad = await watts(page, 'readout-radiated')
 
   await setCableLength(page, 100)
-  // Wait for the reading to actually move before settling on it. Under load the
-  // meter can still be showing the previous length's value when a fixed delay
-  // expires, and the test then compares a number with itself.
+
+  // Radiated power is rendered straight from the solution, so it is true as soon
+  // as the control moves. Assert the expensive half of the lesson on that.
+  await expect
+    .poll(async () => watts(page, 'readout-radiated'), { timeout: 30_000, intervals: [300] })
+    .toBeLessThan(shortRad * 0.6)
+
+  // The SWR meter has ballistics and settles in its own time, so wait for it to
+  // reach the claim rather than sampling it twice and comparing. Sampling is
+  // what makes this flaky under load: both samples land mid-swing and the test
+  // ends up comparing a number with itself.
   await expect
     .poll(async () => readSwr(page), { timeout: 45_000, intervals: [400] })
-    .not.toBeCloseTo(shortSwr, 2)
-  const longSwr = await swr(page)
-  const longRad = await watts(page, 'readout-radiated')
+    .toBeLessThan(shortSwr - 0.05)
 
-  expect(longSwr).toBeLessThan(shortSwr)
+  const longRad = await watts(page, 'readout-radiated')
   expect(longRad).toBeLessThan(shortRad)
 })

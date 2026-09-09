@@ -154,8 +154,26 @@ const ATU_L_MAX_A = 20
 const CONNECTOR_MAX_A = 10
 /** Peak voltage a small feedpoint balun stands off before it arcs, V. Representative. */
 const BALUN_MAX_V = 2500
-/** Housekeeping dissipation: display, receiver, fan and regulators, W. Representative. */
+/**
+ * DC drawn by everything that is not the finals: display, receiver, fan and
+ * regulators, W. Representative. This is a SUPPLY figure, not a heat figure —
+ * most of it is dissipated across the radio rather than into the PA heatsink.
+ */
+const HOUSEKEEPING_DC_W = 12
+
+/**
+ * How much of that housekeeping power ends up in the PA heatsink, W.
+ * Representative: the regulators near the PA and the conducted share of the
+ * rest. The display and the speaker get rid of their own heat elsewhere.
+ */
 const HOUSEKEEPING_W = 3
+
+/**
+ * DC drawn by the pre-driver and driver stages while transmitting, W.
+ * Representative: chosen so the whole-radio current at rated output lands on the
+ * 16.6 A that VA7OJ measured at 14.1 MHz, against Icom's 21 A maximum.
+ */
+const DRIVER_CHAIN_W = 17
 /** Contact resistance of a relay or a connector carrying RF, ohms. Representative. */
 const CONTACT_RESISTANCE_OHM = 0.01
 
@@ -698,8 +716,33 @@ function solveStationInner(raw: StationConfig, thermal: ThermalState): StationSo
     if (typeof reason === 'string' && reason.length > 0) warnings.push(reason)
   }
 
+  // ── Whole-radio supply current ────────────────────────────────────────────
+  // The finals are not the whole radio. Ahead of them sit a pre-driver and a
+  // driver, and alongside them a display, a receiver and a fan that draw current
+  // whatever the transmitter is doing. Icom's published 21 A maximum and the
+  // 16.6 A measured at 100 W on 20 m are both figures for the whole radio, so
+  // that is what the ammeter has to show.
+  const driverChainW = keyed ? DRIVER_CHAIN_W : 0
+  const radioSupplyCurrentA = clamp(
+    (pa.dcInputW + driverChainW + HOUSEKEEPING_DC_W) / PA.supplyV,
+    0,
+    60,
+  )
+
+  // ── What the TEMP meter reads ─────────────────────────────────────────────
+  // The sensor is on the PA assembly, not on the die. The junction responds in
+  // about a tenth of a second and swings with every syllable; a thermistor
+  // bolted to a few hundred grams of aluminium does not, and a meter that
+  // slammed to 108 degC five seconds after keying would be reporting something
+  // no operator has ever watched happen. The junction is still what the damage
+  // model and the stress list use — it is the temperature that matters — but it
+  // is shown where it can be labelled as the die.
+  const sensorTempC = tempOf(thermal, HEATSINK_NODE)
+
   const base: Omit<StationSolution, 'stages' | 'stresses'> = {
     config,
+    radioSupplyCurrentA,
+    sensorTempC,
     antennaZ,
     antennaMatch,
     lineInputZ,
@@ -1400,8 +1443,15 @@ function degradedSolution(raw: StationConfig): StationSolution {
       currentTriggered: false,
     },
   }
+  // A degraded solution is what a caller gets when the model has failed. The
+  // radio is drawing housekeeping current and sitting at ambient.
+  const radioSupplyCurrentA = HOUSEKEEPING_DC_W / PA.supplyV
+  const sensorTempC = clamp(num(config.ambientC, 25), -40, 80)
+
   const base: Omit<StationSolution, 'stages' | 'stresses'> = {
     config,
+    radioSupplyCurrentA,
+    sensorTempC,
     antennaZ: z,
     antennaMatch: MATCHED,
     lineInputZ: z,

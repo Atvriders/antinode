@@ -17,9 +17,14 @@ export interface FeedlineProps {
   showEnvelope: boolean
 }
 
+/** Below this working level the line is drawn on the phosphor scale, not the heat ramp. */
+const COOL_LIMIT = 0.45
+
 const SEGMENTS = 220
 const RADIAL = 10
-const BASE_RADIUS = 0.0055
+// Coax drawn a little over scale so the envelope is legible at a distance, but
+// not so far over that it reads as a garden hose next to a 24 cm radio.
+const BASE_RADIUS = 0.0036
 
 /**
  * The feedline, and the standing wave on it. This is the signature of the whole
@@ -92,6 +97,7 @@ export function Feedline({ profile, lengthM, swr, forwardW, active, reducedMotio
       colour: new THREE.Color(),
       idle: new THREE.Color('#101314'),
       cool: new THREE.Color('#2e6e7c'),
+      live: new THREE.Color('#5fd2e8'),
     }),
     [],
   )
@@ -134,13 +140,23 @@ export function Feedline({ profile, lengthM, swr, forwardW, active, reducedMotio
 
       // Local stress: voltage stresses the dielectric, current stresses the
       // conductors, and the larger of the two is what the cable feels here.
-      const local = hasWave ? Math.max(env, iMag) * Math.min(1, Math.log10(Math.max(swr, 1)) / Math.log10(10)) * 1.6 : 0
+      // How hard this point on the line is working, 0..1.
+      //
+      // A well-matched line is not "slightly hot", it is fine, and colouring it
+      // amber at 1.4:1 tells the reader that a perfectly ordinary station is in
+      // trouble. Nothing enters the heat ramp until the SWR is past about 2:1;
+      // below that the line runs along the phosphor scale like every other
+      // healthy signal in the application.
+      const swrDrive = Math.max(0, Math.log10(Math.max(swr, 1)) / Math.log10(6))
+      const local = hasWave ? Math.max(env, iMag) * Math.min(1, swrDrive) : 0
       if (!hasWave) {
         scratch.colour.copy(scratch.idle)
-      } else if (local < 0.08) {
-        scratch.colour.copy(scratch.cool)
+      } else if (local < COOL_LIMIT) {
+        // Cool, and brighter where the standing wave piles up, so the shape of
+        // the envelope is still readable on a line that is behaving.
+        scratch.colour.copy(scratch.cool).lerp(scratch.live, Math.min(1, local / COOL_LIMIT))
       } else {
-        heatColor(Math.min(1, local), scratch.colour)
+        heatColor(Math.min(1, (local - COOL_LIMIT) / (1 - COOL_LIMIT)), scratch.colour)
       }
 
       for (let j = 0; j <= RADIAL; j++) {
