@@ -98,6 +98,16 @@
   min-width: 0;
 }
 
+/* Seven modes want two or three columns of keys; a slider wants a label and a
+   track and is happy narrow. Auto-fit reads the whole row as equal candidates
+   and hands the picker a single column, which stands seven modes on top of each
+   other and pushes a slider onto a line of its own — so below wide the four are
+   named explicitly and the picker is given twice a slider's width. */
+:global([data-layout='medium']) .knobRow {
+  grid-template-columns: 2fr 1fr;
+  align-items: start;
+}
+
 /* ── Right cluster: the keys that do something consequential ─────────────── */
 
 .actions { display: flex; align-items: stretch; gap: var(--s2); flex: none; }
@@ -149,9 +159,63 @@
   border-color: var(--heat-1);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
   .transport { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
   .freqDigits { font-size: calc(30px * var(--ui-scale)); }
   .actions { justify-content: stretch; }
   .bigKey { flex: 1; }
 }
+
+/* ── Compact ─────────────────────────────────────────────────────────────── */
+
+.transport[data-compact='true'] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s2);
+  /* viewport-fit=cover draws the page under the notch and the home indicator.
+     All four insets, not just the bottom: held sideways, an iPhone puts the
+     notch over whichever end of this bar faces it. */
+  padding:
+    var(--s2)
+    calc(var(--s3) + env(safe-area-inset-right, 0px))
+    calc(var(--s2) + env(safe-area-inset-bottom, 0px))
+    calc(var(--s3) + env(safe-area-inset-left, 0px));
+}
+
+.transport[data-compact='true'] .freqDigits { font-size: calc(34px * var(--ui-scale)); }
+
+/* Eleven band keys will not wrap onto a phone without eating the screen, so they
+   scroll sideways instead — the band you want is one flick away and the row
+   stays one row. */
+.transport[data-compact='true'] .bandRow {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+}
+
+.transport[data-compact='true'] .bandRow::-webkit-scrollbar { display: none; }
+
+.transport[data-compact='true'] .bandKey {
+  flex: 0 0 auto;
+  min-width: 56px;
+  min-height: 40px;
+  scroll-snap-align: start;
+}
+
+.transport[data-compact='true'] .actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+
+.transport[data-compact='true'] .bigKey { min-height: 52px; }
+
+/* The frequency and the two keys share a row: the dial is what you look at and
+   the keys are what you press, and on a phone they should not be a scroll apart. */
+.transport[data-compact='true'] .freq { justify-content: center; }
+
+/* In compact the knob row gives up both its controls to the sheet; without this
+   it still contributes its gap to the bar. */
+.transport[data-compact='true'] .knobRow:empty { display: none; }
+
+/* A tall middle cluster leaves the frequency and the keys floating at its
+   centre. They read as a row with the band strip, so they line up with its top. */
+:global([data-layout='medium']) .transport { align-items: start; }
+:global([data-layout='medium']) .actions { align-self: center; }

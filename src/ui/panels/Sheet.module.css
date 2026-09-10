@@ -1,0 +1,100 @@
+/*
+ * The compact sheet.
+ *
+ * On a narrow or short window nothing may float over the 3D view — the whole
+ * point of the application is the picture, and on a phone the floating meters
+ * and tools covered it completely. Everything that hovers on a desktop lands
+ * here instead, in a tabbed drawer that shares the height rather than stealing
+ * it.
+ */
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--panel-line);
+}
+
+.tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--panel-line);
+  flex: none;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* Touch target: the contract asks for 40px on the short side, and a thumb
+     asks for more. */
+  min-height: 46px;
+  padding: 6px 4px;
+  background: var(--panel-raise);
+  font-family: var(--f-panel);
+  font-size: var(--t-legend);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--silk-dim);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.tab:hover { color: var(--silk); }
+
+.tab[aria-selected='true'] {
+  color: var(--phosphor-bright);
+  background: var(--panel);
+  box-shadow: inset 0 2px 0 var(--phosphor);
+}
+
+/* A live figure under each tab label, so the sheet still reports the station
+   even when the panel you want is not the one on top. */
+.tabValue {
+  font-family: var(--f-num);
+  font-size: calc(11px * var(--ui-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--phosphor);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tab[data-tone='warn'] .tabValue { color: var(--heat-1); }
+.tab[data-tone='hot'] .tabValue { color: var(--heat-2); }
+.tab[data-tone='fault'] .tabValue { color: var(--heat-3); }
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* A phone flick that runs past the end of this panel should stop, not carry
+     on into the page behind it and drag the picture out from under the reader. */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-edge) transparent;
+  padding: var(--s2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  /* The Handbook is absolutely positioned over whichever panel is showing. */
+  position: relative;
+}
+
+.body > * { flex: 0 0 auto; }
+
+/* Mode and drive level, borrowed from the transport bar. Given their own block
+   so they read as the head of the chain rather than as part of the stage list
+   under them. */
+.radioSet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--panel-line);
+}

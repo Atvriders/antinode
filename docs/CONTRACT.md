@@ -313,3 +313,86 @@ second or two and clatters; the interface should not pretend the match is instan
 `microphone.sample().peak` (see `src/sim/mic.ts`) instead of `speechEnvelope(t)`.
 Everything downstream is unchanged. Unit tests must keep using the synthetic
 voice so the physics stays reproducible.
+
+## Responsive layout contract
+
+Three layouts, chosen by available space, not by device sniffing.
+
+| Mode | Applies when | Shape |
+|---|---|---|
+| `wide` | width ≥ 1240px | Three columns: chain rail, viewport, station rail. Meters and tools float over the viewport. |
+| `medium` | 900–1239px | Rails become drawers opened from the header. Meters and tools still float. |
+| `compact` | width < 900px, or height < 520px | Nothing floats over the viewport. The viewport takes a bounded share and every panel moves into a tabbed sheet beneath it. |
+
+Rules that hold in every mode:
+
+1. **The view selector is always reachable.** Six views, and on a phone they may
+   not be pushed off the end of a row. Below `wide` the header carries a compact
+   selector instead of the tab strip.
+2. **The viewport is never smaller than 180px tall, and never smaller than 28% of
+   the viewport height.** A 3D teaching tool whose 3D is a letterbox is not one.
+3. **Nothing *persistent* overlays the canvas in `compact`.** The instrument
+   cluster and the view tools move into the sheet; nothing floats over the
+   picture waiting to be dismissed. Two things are allowed to cover it, both
+   opened deliberately and both closed with one tap: a Handbook card and the
+   tour. Each is given a slot that stops above the transport bar, because the
+   keys have to stay under the reader's thumb — see rules 9 and 10.
+4. **No horizontal page scroll at any width from 320px up.**
+5. **Touch targets are at least 40px on their short side in `compact`.**
+6. **No text is clipped or overlapped.** Segmented controls wrap rather than
+   truncating their labels to single letters.
+
+### What each mode sheds, and where it goes
+
+The bottom bar is height taken from the picture above it, so it gives up
+controls in two stages rather than one. Nothing is ever dropped — every control
+appears in exactly one place at every size.
+
+| Control | `wide` | `medium` | `compact` |
+|---|---|---|---|
+| Frequency, band strip, Tune, Transmit | transport | transport | transport |
+| Mode, RF power | transport | transport | sheet, head of the Chain tab |
+| Mic gain, compression | transport | view tools panel | sheet, View tab |
+| Reference, Tour, Present | header | header | sheet, View tab |
+| View selector | tab strip | native picker | native picker |
+
+Two further rules the picture itself has to keep:
+
+7. **The layout follows the window, not the first measurement.** `window.innerWidth`
+   is already the new number before the `resize` event is dispatched, so the mode
+   is also driven by a `ResizeObserver` on the document element — which reports
+   from layout rather than from the event queue, and is the only signal for a
+   viewport that changes without a window event.
+8. **No two labels are drawn on top of each other, at either type size.** A
+   callout is a fixed number of pixels wide whatever the scene is, so which ones
+   are drawn is decided in screen space five times a second: each is kept only if
+   its box is clear of the ones already placed, taking them in the order the view
+   lists them. The box is *measured* — the real string, in the real font, at the
+   scale `--ui-scale` is currently set to — not estimated from a character count,
+   because presenter mode multiplies that scale by 1.28 and an estimate pinned to
+   1 puts the labels back on top of each other on the projector.
+9. **A Handbook card is readable wherever it opens, and takes nothing with it.**
+   At least 220px of reading pane and a measure no wider than 760px. In
+   `compact` the card leaves the sheet for a slot that covers the picture and the
+   sheet but never the transport: Tune, Transmit, the band strip and the view
+   picker all stay live behind it. In `medium` the drawer that holds it opens
+   with it, so a card opened from the chain list is not rendered into a drawer
+   parked off the edge of the screen.
+10. **The tour outranks everything.** It is the only way to advance a
+   presentation, and on a touch screen its buttons are the only way at all, so
+   its overlay is above any card and it gets the same slot — it may scroll, but
+   its title, step count and progress must never be clipped away.
+11. **Nothing floats past the edge of the picture.** The tools column carries
+   the levels the transport gives up below `wide`, which makes it tall; it is
+   bounded by the picture and scrolls, because a control clipped by the view
+   row has nowhere to be scrolled to.
+
+### Additional test hooks
+
+| testid | element |
+|---|---|
+| `layout` | the application shell, carrying `data-layout="wide\|medium\|compact"` |
+| `view-select` | the compact view selector (a native select below `wide`) |
+| `sheet` | the tabbed panel sheet, present only in `compact` |
+| `sheet-tab-<id>` | its tabs: `meters`, `chain`, `station`, `tools` |
+| `sheet-panel` | the sheet's current panel body |

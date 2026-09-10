@@ -250,3 +250,43 @@
 
 .link:hover { color: var(--ink); border-color: var(--ink); }
 .link:focus-visible { outline-color: var(--ink-red); }
+
+/* ── On a phone ──────────────────────────────────────────────────────────────
+   Inside the sheet the card gets whatever the sheet has, which on a 390px phone
+   is about 150px of reading pane for an article three times that long. These
+   cards are the explanatory half of the whole application, so in the compact
+   layout the card leaves the sheet and takes the bottom of the screen, keeping
+   the picture visible above it — you are usually reading about the part you can
+   still see. It is dismissed the same way, by its own close button. */
+:global([data-layout='compact']) .card {
+  /* Absolute inside the slot the shell gives it, not fixed to the window: the
+     slot already stops above the transport, so there is no window-relative
+     height to guess at and no `vh` unit to disagree with the shell. */
+  position: absolute;
+  inset: 0;
+  height: auto;
+  z-index: 12;
+  border-top: 1px solid var(--ink-rule);
+  box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.55);
+}
+
+/* A landscape phone has 390px of height and 840px of width: a card across the
+   bottom would take almost all the height and set the text 1600px wide, which
+   is unreadable for a different reason. It goes down the right instead, over the
+   sheet it came from, leaving the picture and the view picker alone. */
+@media (orientation: landscape) and (max-height: 560px) {
+  :global([data-layout='compact']) .card {
+    border-top: none;
+    border-left: 1px solid var(--ink-rule);
+    box-shadow: -18px 0 44px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* A tablet is compact but 768px wide, and prose set that wide is hard to track
+   from one line to the next. The column stops where reading stops being easy. */
+:global([data-layout='compact']) .head,
+:global([data-layout='compact']) .body {
+  max-width: 64ch;
+  margin-inline: auto;
+  width: 100%;
+}

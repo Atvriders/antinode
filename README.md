@@ -101,6 +101,27 @@ Turn the **thermal clock** up to 60× before the damage demonstrations, or you
 will be standing there for ten minutes. Temperatures stay correct; only the clock
 is sped up, and the interface says so while it is.
 
+## On a phone or a tablet
+
+The same page, laid out three ways, chosen from the space available rather than
+from what the browser claims to be — so a desktop window dragged narrow behaves
+like a tablet, and a phone turned sideways behaves like neither.
+
+| | Applies when | What you get |
+|---|---|---|
+| **Wide** | 1240px and up | Chain rail, picture, station rail. Meters and tools float over the picture; the six views are a tab strip. |
+| **Medium** | 900–1239px | Rails become drawers from the header. The view strip becomes a picker, and the levels set once a session move out of the bottom bar. |
+| **Compact** | under 900px, or under 520px tall | Nothing floats over the picture. Every panel moves into a tabbed sheet under it, each tab showing its own live figure so the station still reports itself from whichever tab is open. |
+
+Three things the page does on its own: the bottom bar sheds controls into the
+sheet rather than growing and taking the height the picture needs; the labels
+over the model are placed only where they are clear of each other, so turning the
+model until two parts line up hides one label rather than stacking two; and a
+Handbook card opened on a phone leaves the sheet and takes the bottom of the
+screen, with the part it describes still lit up above it.
+
+Everything is reachable at every size. Nothing is desktop-only.
+
 ## Running it
 
 The published image is multi-architecture (amd64 and arm64) and completely

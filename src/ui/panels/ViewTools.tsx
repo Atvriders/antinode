@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import styles from './ViewTools.module.css'
-import { Switch, Segmented } from '../kit/Control'
+import { Switch, Segmented, Slider } from '../kit/Control'
 import { useStation } from '../../sim/store'
 import { microphone } from '../../sim/mic'
 import type { MicStatus } from '../../sim/mic'
@@ -10,16 +10,27 @@ import type { MicStatus } from '../../sim/mic'
  * how fast the thermal clock runs, and whether the chain is being driven by a
  * real voice.
  */
-export function ViewTools() {
+export function ViewTools({
+  inline = false,
+  onOpenReference,
+  showLevels = false,
+}: { inline?: boolean; onOpenReference?: () => void; showLevels?: boolean } = {}) {
   const showLabels = useStation((s) => s.showLabels)
   const showStandingWave = useStation((s) => s.showStandingWave)
   const showEnergyFlow = useStation((s) => s.showEnergyFlow)
   const timeScale = useStation((s) => s.timeScale)
   const toggle = useStation((s) => s.toggle)
   const setTimeScale = useStation((s) => s.setTimeScale)
+  const micGain = useStation((s) => s.config.micGain)
+  const compression = useStation((s) => s.config.compression)
+  const setMicGain = useStation((s) => s.setMicGain)
+  const setCompression = useStation((s) => s.setCompression)
+  const presenter = useStation((s) => s.presenter)
+  const tourIndex = useStation((s) => s.tourIndex)
+  const startTour = useStation((s) => s.startTour)
 
   return (
-    <div className={styles.tools}>
+    <div className={inline ? styles.toolsInline : styles.tools}>
       <div className={styles.group}>
         <div className={styles.row}>
           <Switch label="Labels" on={showLabels} onChange={() => toggle('showLabels')} />
@@ -46,6 +57,55 @@ export function ViewTools() {
           </p>
         )}
       </div>
+
+      {/* The transport drops these below the wide layout, so whichever panel is
+          carrying the tools picks them up. */}
+      {(inline || showLevels) && (
+        <div className={styles.group}>
+          <Slider
+            label="Mic gain"
+            value={micGain}
+            min={0}
+            max={100}
+            step={1}
+            onChange={setMicGain}
+            help="Sets how hard the speech drives the modulator. Watch the ALC, not this number."
+          />
+          <Slider
+            label="Compression"
+            value={compression}
+            min={0}
+            max={10}
+            step={1}
+            format={(v) => (v === 0 ? 'off' : String(v))}
+            onChange={setCompression}
+            help="Raises average power without raising the peak. It makes you denser, not louder."
+          />
+        </div>
+      )}
+
+      {/* On a phone the header has room for the wordmark and the view selector
+          and nothing else, so the three controls that live up there on a desktop
+          come down here, next to the other decisions about what is on screen. */}
+      {inline && (
+        <div className={styles.group}>
+          <div className={styles.row}>
+            <Switch label="Tour" on={tourIndex !== null} onChange={startTour} />
+            <span data-testid="presenter-toggle">
+              <Switch label="Present" on={presenter} onChange={() => toggle('presenter')} />
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles.share}
+            data-testid="reference-open"
+            aria-haspopup="dialog"
+            onClick={() => onOpenReference?.()}
+          >
+            Reference
+          </button>
+        </div>
+      )}
 
       <MicControl />
       <ShareButton />

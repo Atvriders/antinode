@@ -7,7 +7,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  transform: translate(8px, -50%);
+  /* The sideways offset is a margin, not part of the transform: translated
+     content still counts toward the wrapper's scrollWidth, which reads as a
+     clipped label to anything measuring whether text fits its box. */
+  margin-left: 8px;
+  transform: translateY(-50%);
   white-space: nowrap;
   user-select: none;
 }

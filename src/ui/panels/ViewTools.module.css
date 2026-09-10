@@ -1,15 +1,41 @@
 /* Small controls that belong to the picture rather than the station. */
 
+/* In the compact sheet the tools are just another panel: they flow, they do not
+   float, and they use the full width they are given instead of hugging a corner. */
+.toolsInline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  width: 100%;
+}
+
+.toolsInline .group { width: 100%; }
+.toolsInline .row { justify-content: flex-start; }
+
 .tools {
   position: absolute;
   top: var(--s3);
   right: var(--s3);
+  /* Bounded by the picture it floats over. Below the wide layout this column
+     also carries the two level sliders the transport bar gives up, which makes
+     it tall enough that on a short window — a 1024x600 tablet, a laptop with a
+     browser panel open — its last control ended up underneath the transport and
+     could not be clicked. It stops at the bottom of the picture and scrolls. */
+  bottom: var(--s3);
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: flex-start;
   gap: var(--s2);
   max-width: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-edge) transparent;
+  /* The column is only as wide as its widest panel; without this the empty
+     space under the last panel would still swallow drags meant for the model. */
+  pointer-events: none;
 }
 
 .group {
@@ -90,3 +116,14 @@
 }
 
 .share:hover { color: var(--silk-bright); border-color: var(--panel-edge); }
+
+/* The panels themselves take pointer events back; the column between and under
+   them stays transparent to the mouse so the model can still be dragged there. */
+.tools > * { pointer-events: auto; flex: none; }
+
+/* The tools panel's own buttons, in the sheet and in the floating column: both
+   are touched below the wide layout. */
+:global([data-layout='compact']) .share,
+:global([data-layout='medium']) .share,
+:global([data-layout='compact']) .mic,
+:global([data-layout='medium']) .mic { min-height: 44px; }

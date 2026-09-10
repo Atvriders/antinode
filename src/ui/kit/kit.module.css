@@ -137,6 +137,11 @@
   height: 18px;
   background: none;
   cursor: pointer;
+  /* Chrome's user-agent sheet puts 2px of margin on a range, which lands
+     outside the 100% width and pushes the control past its own panel. */
+  margin: 0;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .range::-webkit-slider-runnable-track {
@@ -178,8 +183,10 @@
 
 .segmented {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  /* Wrap into as many rows as it takes. Squeezing seven modes into one row on a
+     phone turned every label into its first letter followed by an ellipsis,
+     which is not a control, it is a puzzle. */
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   gap: 2px;
   padding: 2px;
   background: rgba(0, 0, 0, 0.35);
@@ -189,6 +196,10 @@
 
 .segment {
   padding: 5px 4px;
+  min-height: 32px;
+  /* A finger is about 9 mm across. Below the wide layout every control is being
+     tapped, not clicked, so the row grows rather than staying mouse-sized. */
+  min-width: 0;
   border-radius: var(--r-sm);
   font-family: var(--f-panel);
   font-size: var(--t-legend);
@@ -198,9 +209,17 @@
   color: var(--silk-dim);
   background: transparent;
   transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Wrap rather than ellipsise. "450 ohm window line" cut to "450 ohm wi…" is
+     not a shorter label, it is a different one, and the reader has to open the
+     control to find out which cable they are looking at. */
+  white-space: normal;
+  line-height: 1.15;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .segment:hover:not(:disabled) { color: var(--silk-bright); background: rgba(255, 255, 255, 0.04); }
@@ -258,3 +277,55 @@
 }
 
 .switch[data-on='true'] .switchLabel { color: var(--silk-bright); }
+
+/* ── Touch sizing ───────────────────────────────────────────────────────────
+   Applied from the shell's layout attribute rather than a media query, so the
+   hook that chooses the layout stays the single source of that answer. */
+
+:global([data-layout='compact']) .segment,
+:global([data-layout='medium']) .segment {
+  min-height: 44px;
+  padding: 8px 6px;
+}
+
+/* Only where the control gets the full width of the sheet. In the middle
+   layout the mode picker shares a row with three sliders and has about 120px;
+   asking for 64px columns there drops it to one column and stands seven modes
+   on top of each other, which costs more height than the taller keys save. */
+:global([data-layout='compact']) .segmented {
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+}
+
+:global([data-layout='medium']) .segmented {
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+}
+
+/* A 24-segment bar spends 34.5px on gaps alone. Squeezed narrower than that it
+   overflows its own well instead of shrinking, because gaps do not shrink. */
+.bar { min-width: 64px; overflow: hidden; }
+
+/* A thumb 11px across is a mouse target. Where the page is being touched, the
+   whole slider grows and the thumb grows with it. */
+:global([data-layout='compact']) .range,
+:global([data-layout='medium']) .range { height: 40px; }
+
+:global([data-layout='compact']) .range::-webkit-slider-thumb,
+:global([data-layout='medium']) .range::-webkit-slider-thumb {
+  width: 20px;
+  height: 30px;
+  margin-top: -13px;
+}
+
+:global([data-layout='compact']) .range::-moz-range-thumb,
+:global([data-layout='medium']) .range::-moz-range-thumb { width: 20px; height: 30px; }
+
+/* Slider help is a sentence of explanation under a control. In the middle
+   layout these sliders live in a panel floating over the picture, where a
+   paragraph each is the difference between a picture and a wall of prose. In
+   compact they are in a sheet that scrolls, so the words stay — they are not
+   written anywhere else, and dropping them would lose them entirely. */
+:global([data-layout='medium']) .controlHelp { display: none; }
+
+/* Switches are tapped in the sheet like everything else in it. */
+:global([data-layout='compact']) .switch,
+:global([data-layout='medium']) .switch { min-height: 44px; }

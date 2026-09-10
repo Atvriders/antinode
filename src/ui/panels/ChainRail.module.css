@@ -213,3 +213,7 @@
 }
 
 .assembly:first-child { margin-top: 0; }
+
+/* Touch sizing. In the compact sheet these rows are tapped, not clicked, and
+   the contract asks for 40px on the short side — they were 37. */
+:global([data-layout='compact']) .stage { min-height: 44px; padding-block: var(--s1); }

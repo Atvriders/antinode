@@ -28,11 +28,18 @@
   grid-area: header;
   display: flex;
   align-items: center;
-  gap: var(--s4);
+  gap: var(--s3);
   padding: 0 var(--s3);
   background: linear-gradient(180deg, var(--panel-high) 0%, var(--panel-raise) 100%);
   min-width: 0;
+  /* Every child may shrink, and the row may never wrap into the picture. The
+     view tabs used to overlap the tools at tablet widths, drawing text on top of
+     text, because nothing here was allowed to give. */
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
+
+.header > * { min-width: 0; }
 
 .brand { display: flex; align-items: center; gap: var(--s2); flex: none; }
 
@@ -168,37 +175,114 @@
   color: var(--silk-dim);
 }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* ── Layouts ─────────────────────────────────────────────────────────────── */
+/*
+ * Driven by data-layout, which useLayout sets from the window. A media query
+ * and a hook can disagree — the hook decides which components exist, and if the
+ * CSS made its own decision from a slightly different breakpoint the two would
+ * fight at the edges. One source, both consumers.
+ */
 
 .railToggle { display: none; }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "view" "transport"; }
-  /* The rails become drawers. Clearing grid-area matters: a named area that no
-     longer exists in the template would otherwise create an implicit column and
-     push the page sideways. */
-  .railLeft, .railRight { grid-area: auto; }
-  .rail {
-    position: absolute;
-    top: var(--header-h);
-    bottom: 0;
-    width: min(320px, 86vw);
-    z-index: 6;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-    transition: transform var(--dur) var(--ease);
-    border-right: 1px solid var(--panel-line);
-  }
-  .railLeft { left: 0; transform: translateX(-101%); }
-  .railRight { right: 0; left: auto; transform: translateX(101%); border-right: none; border-left: 1px solid var(--panel-line); }
-  .rail[data-open='true'] { transform: translateX(0); }
-  .railToggle { display: inline-flex; }
+/* Medium: the rails become drawers over the picture. */
+.app[data-layout='medium'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "header" "view" "transport";
 }
 
-@media (max-width: 760px) {
-  .views { overflow-x: auto; margin-inline: 0; scrollbar-width: none; }
-  .views::-webkit-scrollbar { display: none; }
-  .tagline { display: none; }
-  .cluster { flex-wrap: wrap; }
+.app[data-layout='medium'] .railToggle { display: inline-flex; }
+
+.app[data-layout='medium'] .rail {
+  position: absolute;
+  top: var(--header-h);
+  bottom: 0;
+  grid-area: auto;
+  width: min(330px, 88vw);
+  z-index: 6;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  transition: transform var(--dur) var(--ease);
+  border-right: 1px solid var(--panel-line);
+}
+
+.app[data-layout='medium'] .railLeft { left: 0; transform: translateX(-101%); }
+
+.app[data-layout='medium'] .railRight {
+  right: 0;
+  left: auto;
+  transform: translateX(101%);
+  border-right: none;
+  border-left: 1px solid var(--panel-line);
+}
+
+.app[data-layout='medium'] .rail[data-open='true'] { transform: translateX(0); }
+
+/*
+ * Compact: one column, and nothing floats over the picture.
+ *
+ * The viewport is given a share of the height rather than whatever is left over.
+ * `minmax` with a floor is the whole trick: without it a landscape phone, whose
+ * header and transport are the same height as on a desktop but whose screen is
+ * 390px tall, left the 3D view a hundred pixels of letterbox.
+ */
+.app[data-layout='compact'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "header" "view" "sheet" "transport";
+  grid-template-rows:
+    auto
+    /* A percentage, not a vh. On a phone `vh` is the LARGE viewport — the one
+       with the address bar hidden — while this grid is `height: 100%` of the
+       real one, so the two disagree by the height of the address bar and the
+       picture takes more than its share until you scroll. A percentage row
+       resolves against this container, which is the box actually on screen. */
+    minmax(160px, 42%)
+    /* A floor, not just a share. With `minmax(0, 1fr)` the picture's 42% and an
+       `auto` transport could between them leave the sheet at nothing but its tab
+       strip, with every panel behind it unreachable. */
+    minmax(132px, 1fr)
+    auto;
+}
+
+/* A tall window — a tablet held upright — has height the phone layout was not
+   written for. The sheet does not need more than it already has, so the extra
+   goes to the picture. */
+@media (min-height: 900px) {
+  .app[data-layout='compact'] {
+    grid-template-rows: auto minmax(180px, 55%) minmax(132px, 1fr) auto;
+  }
+}
+
+.app[data-layout='compact'] .rail { display: none; }
+
+.app[data-layout='compact'] .view { grid-area: view; }
+
+.app[data-layout='compact'] .viewNote {
+  /* Room is too scarce here to spend four lines on orientation. */
+  display: none;
+}
+
+/* A landscape phone has width to spare and no height: stand the controls up in
+   a column beside the picture rather than laying them across the bottom, where
+   they would take the whole of the little height there is. The picture spans
+   both body rows, so it keeps every pixel the controls do not need. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .app[data-layout='compact'] {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 42%);
+    grid-template-areas:
+      "header header"
+      "view   sheet"
+      "view   transport";
+    /* The transport is a frequency, a band strip and two keys down here — it
+       asks for what it needs and the sheet takes the rest. */
+    grid-template-rows: auto minmax(140px, 1fr) auto;
+  }
+
+  .app[data-layout='compact'] .sheetSlot,
+  .app[data-layout='compact'] .transport {
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ── Skip link ───────────────────────────────────────────────────────────── */
@@ -220,3 +304,97 @@
 
 .viewportHost { position: absolute; inset: 0; }
 .viewportHost canvas { display: block; touch-action: none; }
+
+/* ── The compact view selector ───────────────────────────────────────────── */
+
+.viewSelect {
+  /* Wide enough for the longest view name and no wider: stretched across a
+     landscape phone it reads as a search field rather than a picker. */
+  flex: 1 1 auto;
+  max-width: 22rem;
+  min-width: 0;
+  /* 16px exactly. Safari on iOS zooms the whole page in when a form control
+     smaller than this takes focus, and never zooms back out. */
+  font-size: 16px;
+  /* 44px: a thumb, not a mouse. */
+  min-height: 44px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r-md);
+  background: var(--panel-raise);
+  color: var(--silk-bright);
+  font-family: var(--f-panel);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.viewSelect option { background: var(--ink); color: var(--silk-bright); }
+.viewSelect:focus-visible { outline: 2px solid var(--phosphor); outline-offset: 2px; }
+
+.sheetSlot {
+  grid-area: sheet;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetSlot > * { flex: 1; min-height: 0; }
+
+.app[data-layout='compact'] .tagline { display: none; }
+.app[data-layout='compact'] .brand { flex: none; }
+.app[data-layout='compact'] .headerTools[data-compact='true'] { display: none; }
+
+.app[data-layout='compact'] .header {
+  gap: var(--s2);
+  /* `clip` with a margin rather than `hidden`: the header must not let a parked
+     drawer widen the page, but a focus ring is drawn outside its control's box
+     and `hidden` would shave it off the view picker. */
+  overflow: clip;
+  overflow-clip-margin: 4px;
+  /* An `auto` grid row is still compressible, and when the rows under it ask
+     for more than the window has, this one loses — collapsing to zero height
+     and spilling the wordmark and the view picker over the picture. The header
+     carries the only way to change view, so it is not allowed to lose. */
+  min-height: 52px;
+}
+
+/* ── The Handbook's own slot in compact ──────────────────────────────────────
+   It overlaps the picture and the sheet — two grid items may occupy the same
+   cells — and deliberately stops short of the transport row, because the keys
+   have to stay under the reader's thumb while they read and the tour cannot be
+   advanced if Next is behind a card. */
+.handbookSlot {
+  grid-column: 1;
+  grid-row: 2 / 4;
+  position: relative;
+  min-height: 0;
+  z-index: 12;
+}
+
+/* In landscape the card takes the picture's column instead, so the sheet and
+   the transport beside it both stay live. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .handbookSlot {
+    grid-column: 1;
+    grid-row: 2 / 4;
+  }
+}
+
+/* The tour shares the card's slot and sits above it. */
+.tourSlot { z-index: 14; pointer-events: none; }
+.tourSlot > * { pointer-events: auto; }
+
+/* The same insets at the top and the sides for the header and the sheet: with
+   viewport-fit=cover a landscape iPhone lays its notch over one of them. */
+.app[data-layout='compact'] .header {
+  padding-left: calc(var(--s3) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--s3) + env(safe-area-inset-right, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.app[data-layout='compact'] .sheetSlot {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}

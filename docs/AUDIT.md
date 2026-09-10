@@ -170,6 +170,128 @@ through a clamp. Raising a Yagi past the equivalent of seven metres left the
 waves coming out of empty air, and every antenna without a height parameter
 radiated from the ground.
 
+## Found in the field, fourth round
+
+**It did not work on a phone.** Reported by the owner. Measured at three sizes
+before touching anything: on a 390x844 phone the six view tabs ran off the right
+of the header and the last three could not be reached at all, and the floating
+meter cluster and view tools covered the entire canvas; on a 768x1024 tablet the
+header drew the tabs on top of the wordmark; and a phone held sideways gave the
+3D view **100 pixels** of height. There was no responsive layout — one desktop
+shell, three media queries, and no test that measured any of it.
+
+What the diagnosis turned up, beyond the obvious:
+
+- **The header could be crushed to nothing.** A CSS grid row set to `auto` is
+  still compressible. When the rows under it asked for more than the window had,
+  the header collapsed to zero height and its children — including the only
+  control that changes view — spilled upward over the canvas. `min-height` on the
+  header, not on the row.
+- **The layout lagged the window by an event.** `window.innerWidth` is already
+  the new number before the `resize` event is dispatched, so anything measuring
+  in that gap sees the old layout at the new size. It is also the wrong signal
+  for a phone: an address bar collapsing as the page scrolls, or an on-screen
+  keyboard opening, changes the usable window without firing it. Now driven by a
+  `ResizeObserver` on the document element and by `visualViewport` as well.
+- **Two of the three "clipped text" findings were the measurement, not the page.**
+  A callout offset with `transform: translate(8px, …)` still counts toward its
+  wrapper's `scrollWidth`, which reads as eight pixels of clipped label; the
+  offset is now a margin. And a Smith chart's constant-resistance circles are
+  mostly outside the unit circle by construction — the group is clipped with a
+  `clipPath`, which `getBoundingClientRect` ignores, so it measured as a `<g>`
+  overflowing its `<svg>` by 660px while drawing perfectly. Verified by looking
+  at the chart before changing anything.
+- **The bottom bar was the real problem, not the panels.** At 390px it was 41% of
+  the screen. It now sheds in two stages — mode and drive level to the sheet on a
+  phone, the two levels set once a session to the tools panel on a tablet — which
+  took it to 166px and gave the difference to the picture and the sheet.
+- **Labels stacked on each other.** Not only on a phone: the antenna socket and
+  the fan overlapped on a 1600px desktop too, because they are a few centimetres
+  apart on the back of the radio and a label is a fixed number of pixels wide.
+  Placement is now decided in screen space five times a second, and a label is
+  drawn only where it is clear of the ones already placed.
+
+Also found while fixing it: a Handbook card opened on a phone inherited the
+sheet's height and gave a 420px article a 149px reading pane. The card now leaves
+the sheet below the wide layout and takes the bottom of the window, or the right
+of it in landscape, with the part it describes still lit up in the picture beside
+it. And the event log had been dropped entirely below 900px, leaving an empty
+panel where it used to be. It is the only thing that narrates a
+protection event after the fact, which is most of what the high-SWR
+demonstrations are for, so it now stays and the panel that held it scrolls.
+
+Twenty e2e tests were written against the responsive contract before any of it
+was implemented, five more for label placement and three for the Handbook as
+those rules were added — twenty-eight in all. One existing test was rewritten: it
+had been booting the whole scene six times to measure page width at six widths,
+which is where the suite's only flake was coming from.
+
+### The adversarial pass over that work
+
+Five reviewers with different lenses — cascade, React, reachability,
+accessibility, and real browsers — went over the responsive change before it
+shipped, and every claim they made was handed to a separate agent whose job was
+to refute it. Thirty-nine claims, twenty-seven survived. Twelve were refuted,
+most of them usefully: two rested on a stale reading of the diff rather than the
+files, one was a pre-existing idiom the change had not touched, and one asserted
+a contract sentence that had already been rewritten.
+
+What survived, and what it cost to have missed it:
+
+- **A card opened on a phone covered the whole transport bar**, and with it Tune,
+  Transmit, the band strip and the dial. Worse, it covered the tour's Next and
+  Back, which on a touch screen are the only way to advance a presentation at
+  all. This was a regression introduced by the fix for the 149px reading pane,
+  half an hour old, and the test written alongside that fix checked only that the
+  card was readable — never that anything behind it still worked. The card and
+  the tour now get grid slots that stop above the transport row.
+- **The floating tools column ran past the bottom of the picture** in `medium` on
+  any window shorter than about 640px, which put "Use my mic" and "Copy this
+  bench" under the transport with nothing to scroll. Also a regression from this
+  change: moving the two level sliders into that column made it 410px tall. It is
+  now bounded by the picture and scrolls.
+- **Three quarters of the compact interface was never measured.** The per-size
+  audit only ever sees the tab the sheet opens on, so the 40px touch rule was
+  being checked against the Meters panel and nothing else. Fifty-three controls
+  across the other three tabs were under it.
+- **Presenter mode put the labels back on top of each other.** The collision
+  boxes were estimated in unscaled pixels while the labels scale with
+  `--ui-scale`, so the one configuration this application exists to be shown in
+  was the one the declutter did not cover. Threading the scale through the
+  estimate was not enough — a character count times a constant was still 27% out
+  at the larger size — so the box is now measured: the real string, in the real
+  font, through a 2D canvas, cached per string. The first version of the test
+  written for this passed against the broken code, because it looked at the
+  exterior view and its four labels; it only became a test when it was pointed at
+  the cutaway and its eight.
+- **`clock.getElapsedTime()` has a side effect.** It advances the Clock's own
+  `oldTime`, so anything else asking the same Clock later in the frame gets a
+  delta near zero. The declutter now accumulates the delta the render loop
+  already passes it.
+- **Space belonged to the key, not to the focused control**, so a keyboard user
+  who tabbed to a sheet tab transmitted instead of opening it.
+- **A closed drawer kept two dozen tab stops** in `medium`, and a card opened
+  from the chain list was rendered into a drawer parked off the right edge.
+- Smaller: the view picker was 11.5px, which makes Safari on iOS zoom the page in
+  and never back out; only the bottom safe-area inset was honoured, so a
+  landscape iPhone laid its notch over the Transmit key; `overflow: hidden` on
+  the header shaved the focus ring off the picker; two pre-change media queries
+  at `max-width: 900px` fired *inside* the medium layout at exactly 900px; a
+  class name survived the rule it referenced and shipped as a literal
+  `undefined`; and a `grid-template-rows` line was declared twice.
+
+One more, found while making the above stick: three geometry assertions were
+measuring the Handbook card **six pixels from where it lands**, because
+`toBeVisible` resolves the moment an element paints and the card slides in over
+0.42s. Two of them had been passing on that reading. A geometry assertion has to
+wait for `getAnimations()` to empty, or it is testing the entrance rather than
+the position.
+
+The pattern worth keeping: **every one of the three regressions was introduced by
+a fix, and each was covered by a test written at the same time as the fix.** A
+test written by the same hand, in the same minute, checks the thing that was just
+made to work. It does not check what that change took away.
+
 ## Known and open
 
 These were raised, are defensible, and are not fixed:

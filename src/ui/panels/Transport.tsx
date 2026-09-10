@@ -6,19 +6,56 @@ import { BANDS } from '../../rf/bands'
 import { MODE_LIST } from '../../rf/audio'
 import { fmtPower } from '../format'
 import type { Mode } from '../../rf/types'
+import type { LayoutMode } from '../useLayout'
+
+/**
+ * Mode and drive level. They sit in the transport when there is room across the
+ * bottom of the screen and in the sheet when there is not, so they are written
+ * once and placed twice.
+ */
+export function RadioSet({ modeColumns }: { modeColumns?: number } = {}) {
+  const config = useStation((s) => s.config)
+  const setMode = useStation((s) => s.setMode)
+  const setPower = useStation((s) => s.setPower)
+
+  return (
+    <>
+      <Segmented<Mode>
+        label="Mode"
+        value={config.mode}
+        options={MODE_LIST.map((m) => ({ value: m.id, label: m.label, title: m.note }))}
+        onChange={setMode}
+        columns={modeColumns}
+        testIdPrefix="mode"
+      />
+      <Slider
+        testId="power-set"
+        label="RF power"
+        value={config.powerSetW}
+        min={0}
+        max={100}
+        step={1}
+        format={(v) => fmtPower(v)}
+        onChange={setPower}
+      />
+    </>
+  )
+}
 
 /**
  * The transport: the handful of controls a presenter touches constantly, laid
  * out the way they sit on the radio — frequency on the left, band and level
  * controls in the middle, and the two keys with consequences on the right.
  */
-export function Transport() {
+export function Transport({ layout = 'wide' }: { layout?: LayoutMode } = {}) {
+  // Two stages of shedding, not one. A tablet in landscape has room across the
+  // bar for the mode and the drive level but not for the two levels that are
+  // set once a session; a phone has room for neither.
+  const compact = layout === 'compact'
   const config = useStation((s) => s.config)
   const tunerBusy = useStation((s) => s.tunerBusy)
   const setFreq = useStation((s) => s.setFreq)
   const setBand = useStation((s) => s.setBand)
-  const setMode = useStation((s) => s.setMode)
-  const setPower = useStation((s) => s.setPower)
   const setMicGain = useStation((s) => s.setMicGain)
   const setCompression = useStation((s) => s.setCompression)
   const setKeyed = useStation((s) => s.setKeyed)
@@ -27,7 +64,7 @@ export function Transport() {
   const band = BANDS.find((b) => config.freqHz >= b.startHz && config.freqHz <= b.endHz)
 
   return (
-    <div className={styles.transport}>
+    <div className={styles.transport} data-compact={compact}>
       <div data-testid="freq-display">
         <FreqDisplay hz={config.freqHz} onChange={setFreq} />
       </div>
@@ -50,43 +87,35 @@ export function Transport() {
           ))}
         </div>
 
-        <div className={styles.knobRow}>
-          <Segmented<Mode>
-            label="Mode"
-            value={config.mode}
-            options={MODE_LIST.map((m) => ({ value: m.id, label: m.label, title: m.note }))}
-            onChange={setMode}
-            testIdPrefix="mode"
-          />
-          <Slider
-            testId="power-set"
-            label="RF power"
-            value={config.powerSetW}
-            min={0}
-            max={100}
-            step={1}
-            format={(v) => fmtPower(v)}
-            onChange={setPower}
-          />
-          <Slider
-            label="Mic gain"
-            value={config.micGain}
-            min={0}
-            max={100}
-            step={1}
-            onChange={setMicGain}
-            help="Sets how hard the speech drives the modulator. Watch the ALC, not this number."
-          />
-          <Slider
-            label="Compression"
-            value={config.compression}
-            min={0}
-            max={10}
-            step={1}
-            format={(v) => (v === 0 ? 'off' : String(v))}
-            onChange={setCompression}
-            help="Raises average power without raising the peak. It does not make you louder, it makes you denser."
-          />
+        <div className={styles.knobRow} data-compact={compact}>
+          {/* Below wide these move into the sheet. A phone's transport keeps
+              only what is touched between one sentence and the next — the
+              frequency, the band and the two keys — because everything left in
+              this bar is height taken from the picture above it. */}
+          {!compact && <RadioSet modeColumns={layout === 'medium' ? 4 : undefined} />}
+          {layout === 'wide' && (
+            <>
+              <Slider
+                label="Mic gain"
+                value={config.micGain}
+                min={0}
+                max={100}
+                step={1}
+                onChange={setMicGain}
+                help="Sets how hard the speech drives the modulator. Watch the ALC, not this number."
+              />
+              <Slider
+                label="Compression"
+                value={config.compression}
+                min={0}
+                max={10}
+                step={1}
+                format={(v) => (v === 0 ? 'off' : String(v))}
+                onChange={setCompression}
+                help="Raises average power without raising the peak. It does not make you louder, it makes you denser."
+              />
+            </>
+          )}
         </div>
       </div>
 

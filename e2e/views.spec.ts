@@ -20,10 +20,14 @@ test('every view renders and is reachable by keyboard', async ({ page }) => {
 })
 
 test('layout does not scroll horizontally at any width', async ({ page }) => {
+  // One boot, then resized. Reloading at every width meant six full scene boots
+  // on a software renderer for a measurement that does not depend on how the
+  // page arrived at its width — and responsive.spec.ts already checks the
+  // freshly-booted case at eleven sizes.
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('[data-testid="viewport"] canvas', { timeout: 30_000 })
   for (const width of [1920, 1440, 1180, 900, 640, 380]) {
     await page.setViewportSize({ width, height: 900 })
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-    await page.waitForSelector('[data-testid="viewport"] canvas', { timeout: 30_000 })
     await page.waitForTimeout(700)
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

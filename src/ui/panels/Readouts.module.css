@@ -161,11 +161,21 @@
 
 .logEmpty { font-size: var(--t-legend); color: var(--silk-dim); margin: 0; }
 
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
   .block { padding: var(--s2); }
   .meters { min-width: 150px; }
-  .log { display: none; }
 }
+
+/* The log used to be dropped below 900px, back when this panel floated over the
+   picture at every size and there was nowhere else for it to go. It is the only
+   thing that narrates a protection event after the fact — which is most of what
+   the high-SWR demonstrations are for — so now that it sits in a sheet that
+   scrolls, it stays, just shorter. */
+:global([data-layout='compact']) .log {
+  min-width: 0;
+  max-height: 84px;
+}
+
 
 /* Solver advice: sentences, not readings. Set narrower than the meter block so
    it reads as prose rather than as another column of figures. */
@@ -199,4 +209,35 @@
   height: 4px;
   border-radius: 50%;
   background: currentColor;
+}
+
+/* ── Narrow hosts ───────────────────────────────────────────────────────────
+   The cluster floats over the picture on a desktop, sits in a rail in the
+   middle layout and lives in the sheet on a phone. Three columns of numbers do
+   not fit a phone, and squeezing them turns the meter wells into slivers and
+   wraps every label onto two lines, so below wide they stack. */
+
+:global([data-layout='compact']) .row {
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+:global([data-layout='compact']) .meters { min-width: 0; }
+:global([data-layout='compact']) .block { width: 100%; min-width: 0; }
+:global([data-layout='compact']) .cluster { width: 100%; }
+:global([data-layout='compact']) .splitRow { gap: var(--s2); }
+
+/* A tablet held upright is compact — nothing floats over the picture — but the
+   sheet under it is as wide as a desktop rail, and one column of numbers down
+   the left of it leaves half the panel blank. Portrait only: in landscape the
+   sheet is a column beside the picture and is genuinely narrow. */
+@media (min-width: 620px) and (orientation: portrait) {
+  :global([data-layout='compact']) .row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--s4);
+  }
+
+  :global([data-layout='compact']) .meters { min-width: 240px; flex: 1 1 240px; }
+  :global([data-layout='compact']) .split { flex: 1 1 200px; }
 }
