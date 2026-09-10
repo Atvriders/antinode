@@ -280,12 +280,24 @@ What survived, and what it cost to have missed it:
   class name survived the rule it referenced and shipped as a literal
   `undefined`; and a `grid-template-rows` line was declared twice.
 
-One more, found while making the above stick: three geometry assertions were
-measuring the Handbook card **six pixels from where it lands**, because
-`toBeVisible` resolves the moment an element paints and the card slides in over
-0.42s. Two of them had been passing on that reading. A geometry assertion has to
+Two more, both found by asserting before the browser had caught up. Three
+geometry assertions were measuring the Handbook card **six pixels from where it
+lands**, because `toBeVisible` resolves the moment an element paints and the card
+slides in over 0.42s. Two of them had been passing on that reading. A geometry assertion has to
 wait for `getAnimations()` to empty, or it is testing the entrance rather than
 the position.
+
+And the resize test failed on CI after passing locally, for the third time in
+this project's history of the same mistake. `setViewportSize` resolves when the
+browser has been *told* the new size; `window.innerWidth` updates before the
+resize is dispatched; the shell re-renders after that again. On a runner without
+a GPU those three moments are far enough apart that a helper waiting for two
+identical readings samples twice inside one of the gaps and calls it settled — so
+the audit read the layout the shell had *before* the resize. It now waits for the
+shell to reach the layout the contract says that window should have, and the
+suite takes `SLOW_RUNNER=6` to throttle the CPU by that factor, which reproduces
+the runner in thirty seconds instead of forty-two minutes. Verified both ways:
+without the gate the test fails under throttling with exactly the CI symptom.
 
 The pattern worth keeping: **every one of the three regressions was introduced by
 a fix, and each was covered by a test written at the same time as the fix.** A

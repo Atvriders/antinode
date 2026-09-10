@@ -26,6 +26,24 @@ type ViewId = (typeof VIEWS)[number]
 
 const SHEET_TABS = ['meters', 'chain', 'station', 'tools'] as const
 
+/**
+ * Set `SLOW_RUNNER=6` to run this suite with the CPU throttled by that factor.
+ *
+ * Two timing bugs in this file were only ever reproducible on CI, where there is
+ * no GPU and the machine is a fraction as fast: the shell lags a resize by more
+ * than a poll interval, so a helper that waits for two identical readings can
+ * sample twice inside the lag and call it settled. Guessing at that from a fast
+ * machine does not work. Throttling reproduces it in about thirty seconds.
+ */
+const SLOW_RUNNER = Number(process.env.SLOW_RUNNER ?? 0)
+
+test.beforeEach(async ({ page }) => {
+  if (SLOW_RUNNER > 1) {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: SLOW_RUNNER })
+  }
+})
+
 type LayoutMode = 'wide' | 'medium' | 'compact'
 
 type Size = { width: number; height: number; note: string }
@@ -94,8 +112,51 @@ async function boot(page: Page): Promise<void> {
   await settle(page)
 }
 
-/** Waits for two identical readings rather than for a fixed number of seconds. */
-async function settle(page: Page): Promise<void> {
+/**
+ * Waits for two identical readings rather than for a fixed number of seconds.
+ *
+ * `expected` is the viewport just asked for, and it is not optional courtesy:
+ * `setViewportSize` resolves when the browser has been *told* the new size, not
+ * when it has reflowed to it. On a slow runner that gap is wider than the poll
+ * interval, so two consecutive readings can both land inside it — identical,
+ * because nothing has moved yet — and the shell reports the layout it had before
+ * the resize. Waiting for `innerWidth`/`innerHeight` to agree with the request
+ * first closes the gap; the two-identical-readings pass then does what it is for,
+ * which is waiting out the reflow that follows.
+ */
+async function settle(page: Page, expected?: { width: number; height: number }): Promise<void> {
+  // Defaults to the size Playwright was told to set, so every caller gets this
+  // without having to remember to ask for it.
+  const want = expected ?? page.viewportSize()
+  if (want) {
+    // Two conditions, because the window and the shell move at different times.
+    // `setViewportSize` resolves when the browser has been *told* the new size;
+    // `window.innerWidth` then updates before the resize is dispatched; and the
+    // shell re-renders after that again. On a slow runner all three are far
+    // enough apart that the two-identical-readings pass below can sample twice
+    // inside one of the gaps and call it settled.
+    //
+    // The layout waited for is the contract's own rule, restated here in
+    // `expectedLayout` — not read from the implementation — so this waits for
+    // the right answer rather than for whatever answer the app happens to give.
+    const target = `${want.width}x${want.height}/${expectedLayout(want.width, want.height)}`
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () =>
+              `${window.innerWidth}x${window.innerHeight}/${
+                document.querySelector('[data-testid="layout"]')?.getAttribute('data-layout') ?? 'none'
+              }`,
+          ),
+        {
+          message: `the shell never reached ${target}`,
+          timeout: 30_000,
+          intervals: [50, 100, 200, 400],
+        },
+      )
+      .toBe(target)
+  }
   let previous = ''
   await expect
     .poll(
@@ -817,7 +878,7 @@ test.describe('resizing', () => {
       { width: 1920, height: 1080, mode: 'wide' as const },
     ]) {
       await page.setViewportSize({ width: next.width, height: next.height })
-      await settle(page)
+      await settle(page, { width: next.width, height: next.height })
       const a = await audit(page)
       expect(
         a.layout,

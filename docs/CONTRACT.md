@@ -387,6 +387,14 @@ Two further rules the picture itself has to keep:
    bounded by the picture and scrolls, because a control clipped by the view
    row has nowhere to be scrolled to.
 
+### Running the suite as if on a slow runner
+
+`SLOW_RUNNER=6 npx playwright test e2e/responsive.spec.ts` throttles the CPU by
+that factor. Two timing bugs in this suite reproduced only on CI, where there is
+no GPU: the shell lags a resize by more than a poll interval, so a helper waiting
+for two identical readings can sample twice inside the lag. Throttling reproduces
+that in thirty seconds rather than in a forty-minute CI round trip.
+
 ### Additional test hooks
 
 | testid | element |
