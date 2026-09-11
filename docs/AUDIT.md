@@ -254,6 +254,11 @@ What survived, and what it cost to have missed it:
   audit only ever sees the tab the sheet opens on, so the 40px touch rule was
   being checked against the Meters panel and nothing else. Fifty-three controls
   across the other three tabs were under it.
+- **Labels were being painted before anything had checked them.** drei mounts the
+  label elements over several frames, and a freshly mounted one was visible
+  before any declutter pass had measured it — at three frames a second that is a
+  third of a second of two labels sitting on top of each other. A label now
+  starts hidden and is only ever revealed by a pass that has measured it.
 - **Presenter mode put the labels back on top of each other.** The collision
   boxes were estimated in unscaled pixels while the labels scale with
   `--ui-scale`, so the one configuration this application exists to be shown in
@@ -298,6 +303,29 @@ shell to reach the layout the contract says that window should have, and the
 suite takes `SLOW_RUNNER=6` to throttle the CPU by that factor, which reproduces
 the runner in thirty seconds instead of forty-two minutes. Verified both ways:
 without the gate the test fails under throttling with exactly the CI symptom.
+
+### Seventy-one tests passed against a black screen
+
+Chasing the last of the label overlaps, the declutter was moved to
+`useFrame(cb, 1)` so it would run after drei had written the frame's transforms.
+**A `useFrame` with a priority above zero takes over the render loop in
+react-three-fiber: the automatic render stops.** The 3D scene stopped being drawn
+entirely — and the whole suite went green. The labels rendered, the meters
+updated, every panel behaved, all of it over a black canvas, because every test
+in the suite reads the DOM and the DOM was perfect.
+
+Worse, the check written to rule this out passed too. It screenshotted the *page*
+before and after keying up and asserted the images differed — which they did,
+because the meters are DOM. It proved nothing about the canvas. The defect was
+found by looking at a screenshot.
+
+A WebGL canvas cannot be read back with `toDataURL` or `drawImage` unless it was
+created with `preserveDrawingBuffer`, which costs frame time in normal use, and
+this version of r3f exposes no render stats on the element. `e2e/render-loop.spec.ts`
+compares the picture instead: against the same viewport with the canvas hidden —
+the page background, which is exactly what a dead canvas looks like — and against
+a different view of the same scene. Both fail on the broken build and pass on the
+fixed one; a test that has not been seen to fail is not evidence.
 
 The pattern worth keeping: **every one of the three regressions was introduced by
 a fix, and each was covered by a test written at the same time as the fix.** A

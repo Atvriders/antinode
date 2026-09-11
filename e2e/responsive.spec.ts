@@ -501,6 +501,51 @@ async function stillMoving(page: Page, testid: string): Promise<void> {
     .toBe(0)
 }
 
+/**
+ * Waits until the declutter has stopped changing its mind.
+ *
+ * While the camera is flying to a new view the set of labels legitimately
+ * changes from frame to frame, and drei writes its transforms in its own
+ * `useFrame` — which may run after the declutter's, so for one frame the set on
+ * screen is the answer for where things were the frame before. At sixty frames a
+ * second that is sixteen milliseconds and nobody sees it. The rule is about the
+ * picture at rest, so this waits for rest: the same labels showing across three
+ * readings a quarter of a second apart.
+ */
+async function labelsAtRest(page: Page): Promise<void> {
+  // Positions, not just which labels are showing. At a low frame rate the set can
+  // hold steady for a quarter of a second while the camera is still drifting, and
+  // a pair that is still moving can drift into each other between the pass that
+  // cleared them and the frame that paints them.
+  const read = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-testid^="callout-"][data-hidden="false"]'))
+        .map((el) => {
+          const r = el.getBoundingClientRect()
+          return `${el.getAttribute('data-testid')}@${Math.round(r.left)},${Math.round(r.top)}`
+        })
+        .sort()
+        .join(','),
+    )
+  let same = 0
+  let previous = ''
+  await expect
+    .poll(
+      async () => {
+        const now = await read()
+        same = now === previous && now !== '' ? same + 1 : 0
+        previous = now
+        return same
+      },
+      {
+        message: 'the labels never settled: the picture was still moving',
+        timeout: 40_000,
+        intervals: [250],
+      },
+    )
+    .toBeGreaterThanOrEqual(2)
+}
+
 /** Wide uses the tab strip; everything below it uses the compact select. */
 async function chooseView(page: Page, view: ViewId, mode: LayoutMode): Promise<void> {
   if (mode === 'wide') {
@@ -914,11 +959,13 @@ test.describe('labels over the picture', () => {
     test(`no two callouts overlap at ${size.width}x${size.height}`, async ({ page }) => {
       await page.setViewportSize(size)
       await boot(page)
-      // The declutter pass runs five times a second; give it several.
-      await page.waitForTimeout(1200)
+      // Labels start hidden and are revealed only by a pass that has measured
+      // them, so wait for the picture to settle rather than guessing at how long
+      // it takes on whatever machine this is.
+      await labelsAtRest(page)
 
       const clashes = await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('[data-testid^="callout-"]')).map(
+        const labels = Array.from(document.querySelectorAll('[data-testid^="callout-"][data-hidden="false"]')).map(
           (el) => ({ text: el.textContent?.trim() ?? '', box: el.getBoundingClientRect() }),
         )
         const found: string[] = []
@@ -1308,10 +1355,10 @@ test.describe('labels in presenter mode', () => {
       // four and would pass on a bad estimate as easily as a good one.
       const mode = (await audit(page)).layout as LayoutMode
       await chooseView(page, 'cutaway', mode)
-      await page.waitForTimeout(1400)
+      await labelsAtRest(page)
 
       const clashes = await page.evaluate(() => {
-        const labels = Array.from(document.querySelectorAll('[data-testid^="callout-"]')).map((el) => ({
+        const labels = Array.from(document.querySelectorAll('[data-testid^="callout-"][data-hidden="false"]')).map((el) => ({
           text: el.textContent?.trim() ?? '',
           box: el.getBoundingClientRect(),
         }))

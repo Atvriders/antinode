@@ -60,3 +60,15 @@
 }
 
 .callout[data-tone='hot'] .value { color: var(--heat-1); }
+
+/* Hidden, not unmounted: the declutter measures these boxes every pass, so they
+   have to keep being laid out. `visibility` does that; `display: none` does not.
+   `data-hidden` is written by Annotations, never by React.
+
+   A label with no attribute at all has not been through a pass yet, and starts
+   hidden. drei mounts these elements over several frames, and on a slow machine
+   that is long enough for a label to be painted before anything has checked
+   whether it lands on top of its neighbour. Nothing is shown until it has been
+   measured; the cost is that labels fade up a frame late, which nobody sees. */
+.callout:not([data-hidden]),
+.callout[data-hidden='true'] { visibility: hidden; }

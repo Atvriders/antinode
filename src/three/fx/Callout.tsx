@@ -37,7 +37,15 @@ export function Callout({ spec }: { spec: CalloutSpec }) {
       zIndexRange={[4, 0]}
       wrapperClass={styles.wrapper}
     >
-      <div className={styles.callout} data-testid={`callout-${spec.id}`} data-tone={spec.tone ?? 'normal'}>
+      {/* `data-hidden` and `visibility` are written here by the declutter in
+          Annotations, inside the frame it measures — deliberately not React
+          state, which would apply them a frame late. Suppressed labels are
+          hidden rather than unmounted so their boxes stay measurable. */}
+      <div
+        className={styles.callout}
+        data-testid={`callout-${spec.id}`}
+        data-tone={spec.tone ?? 'normal'}
+      >
         <span className={styles.dot} aria-hidden="true" />
         <span className={styles.text}>
           <span className={styles.label}>{spec.label}</span>

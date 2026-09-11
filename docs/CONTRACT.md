@@ -363,14 +363,22 @@ Two further rules the picture itself has to keep:
    is also driven by a `ResizeObserver` on the document element — which reports
    from layout rather than from the event queue, and is the only signal for a
    viewport that changes without a window event.
-8. **No two labels are drawn on top of each other, at either type size.** A
-   callout is a fixed number of pixels wide whatever the scene is, so which ones
-   are drawn is decided in screen space five times a second: each is kept only if
-   its box is clear of the ones already placed, taking them in the order the view
-   lists them. The box is *measured* — the real string, in the real font, at the
-   scale `--ui-scale` is currently set to — not estimated from a character count,
-   because presenter mode multiplies that scale by 1.28 and an estimate pinned to
-   1 puts the labels back on top of each other on the projector.
+8. **No two labels are drawn on top of each other once the picture is at rest.**
+   Which ones are drawn
+   is decided in screen space — recomputed on every frame while the camera or the
+   model is moving, and five times a second when they are still. The box is the
+   one the browser laid out, read back from the element, not predicted from the
+   text: a prediction was a few per cent out at one type size and enough to
+   matter at the 1.28 scale presenter mode uses, which is the configuration this
+   application exists to be shown in. A label starts hidden and is revealed only
+   by a pass that has measured it, so nothing is ever painted unvetted.
+   While the camera is flying the set can be one frame behind what is painted,
+   because drei writes its transforms in its own `useFrame` and the order between
+   them is not guaranteed; at any frame rate a person would sit through that is a
+   few milliseconds, and the alternative — taking the render priority to force the
+   order — stops the scene drawing altogether.
+   The scene must also actually be rendering — see `e2e/render-loop.spec.ts`, and
+   never give a `useFrame` a priority above zero without reading it.
 9. **A Handbook card is readable wherever it opens, and takes nothing with it.**
    At least 220px of reading pane and a measure no wider than 760px. In
    `compact` the card leaves the sheet for a slot that covers the picture and the

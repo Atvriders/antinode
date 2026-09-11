@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import { Callout } from './Callout'
@@ -25,74 +25,7 @@ import type { ViewId } from '../../content/types'
  * first.
  */
 
-/*
- * How wide a label will be, measured rather than guessed.
- *
- * A character count times a constant was close enough at one type size and
- * wrong at the other: presenter mode multiplies `--ui-scale` to 1.28 for a
- * projector, and a label that is 27% wider than the box reserved for it goes
- * back to sitting on top of its neighbour — in exactly the configuration this
- * application exists to be shown in. A 2D canvas measures the real string in
- * the real font without touching the DOM or forcing layout, and the answers are
- * cached, so the cost is one measurement per distinct string.
- *
- * These constants mirror callout.module.css. If the box's padding, its gaps or
- * the dot change there, they change here.
- */
-const CALLOUT_MARGIN = 8
-const CALLOUT_DOT = 5
-const CALLOUT_GAP = 6
-const TEXT_PADDING = 7
-const TEXT_BORDER = 1
-const VALUE_GAP = 6
-/** `--track-label`, in ems. measureText does not account for letter-spacing. */
-const TRACKING_EM = 0.08
-
-type Metrics = { scale: number; panel: string; num: string }
-
-const gauge: CanvasRenderingContext2D | null =
-  typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d')
-const widths = new Map<string, number>()
-
-function measure(text: string, font: string, size: number): number {
-  if (!gauge) return text.length * size * 0.62
-  const key = `${font}|${text}`
-  const cached = widths.get(key)
-  if (cached !== undefined) return cached
-  gauge.font = font
-  const w = gauge.measureText(text).width + text.length * size * TRACKING_EM
-  widths.set(key, w)
-  return w
-}
-
-/** The type the labels are actually set in, read from the same tokens the CSS uses. */
-function metrics(): Metrics {
-  if (typeof document === 'undefined') return { scale: 1, panel: '600 10px sans-serif', num: '10px monospace' }
-  const root = getComputedStyle(document.documentElement)
-  const raw = Number.parseFloat(root.getPropertyValue('--ui-scale'))
-  const scale = Number.isFinite(raw) && raw > 0 ? raw : 1
-  const size = 10 * scale
-  return {
-    scale,
-    panel: `600 ${size}px ${root.getPropertyValue('--f-panel') || 'sans-serif'}`,
-    num: `${size}px ${root.getPropertyValue('--f-num') || 'monospace'}`,
-  }
-}
-
-function labelWidth(label: string, value: string | undefined, m: Metrics): number {
-  const size = 10 * m.scale
-  // The label is set in small caps by `text-transform`, so that is what is measured.
-  let text = measure(label.toUpperCase(), m.panel, size)
-  if (value) text += VALUE_GAP + measure(value, m.num, size)
-  return (
-    CALLOUT_MARGIN + CALLOUT_DOT + CALLOUT_GAP + (TEXT_BORDER + TEXT_PADDING) * 2 + text
-  )
-}
-
-/** Label height at that same scale: the line box, its padding and its border. */
-const labelHeight = (scale: number) => 10 * scale * 1.35 + 4 + 2
-
-/** A label box in canvas pixels. */
+/** A label box in viewport pixels. */
 export type LabelBox = { id: string; left: number; right: number; top: number; bottom: number }
 
 /**
@@ -197,62 +130,78 @@ export function Annotations({
   }, [view, explode, dieTempC, radiatedW, swr, keyed, antennaLabel])
 
   const camera = useThree((state) => state.camera)
-  const size = useThree((state) => state.size)
-  // Keyed by which labels there are, not by the array holding them: the specs
-  // carry live figures, so the array is rebuilt whenever the temperature moves,
-  // while the set of labels only changes when the view does. A new view shows
-  // everything until this frame's pass has run against it — a set that is
-  // briefly too crowded reads better than a frame with nothing on it.
-  const key = specs.map((s) => s.id).join('|')
-  const [placed, setPlaced] = useState<{ of: string; ids: string[] }>(() => ({
-    of: key,
-    ids: specs.map((s) => s.id),
-  }))
   const sinceLast = useRef(0)
   const probe = useRef(new Vector3())
+  /** Where the camera was, and how far the model was opened, at the last pass. */
+  const lastEye = useRef(new Vector3(Infinity, Infinity, Infinity))
+  const lastExplode = useRef(Number.NaN)
 
-  // The seconds since the last pass, accumulated from the delta the render loop
-  // already computed. `clock.getElapsedTime()` would read the same number, but
-  // it advances the Clock's own `oldTime` as a side effect, which leaves a
-  // near-zero delta for anything else that asks the Clock later in the frame.
+  /*
+   * Which labels are drawn is decided and applied inside one frame, on the DOM
+   * rather than through React state.
+   *
+   * Through state it took a frame to land: measure at frame N, commit at N+1,
+   * paint the answer for where things were one frame ago. At sixty frames a
+   * second that is invisible; at three, on a machine with no GPU, a frame is a
+   * third of a second of movement and two labels sit on top of each other for
+   * all of it. Visibility here is a per-frame property of the picture, not
+   * application state — nothing else reads it, and no re-render depends on it.
+   *
+   * Default priority, deliberately. A useFrame with a priority above zero takes
+   * over the render loop in react-three-fiber and the scene stops drawing
+   * altogether — which it did, silently, while the labels carried on rendering
+   * over a black canvas. Ordering against drei's own transform write is not
+   * worth that; a label measured one frame late is invisible at any frame rate
+   * a person would sit through, and nothing is shown until it has been measured.
+   */
   useFrame((_state, delta) => {
-    const stale = placed.of !== key
     sinceLast.current += delta
-    if (!stale && sinceLast.current < DECLUTTER_INTERVAL) return
+    // While anything is moving the answer moves with it, so it is recomputed on
+    // the frame rather than on the clock. Both movements count: the camera
+    // swings, and in the exploded view the parts slide apart underneath it.
+    const moved =
+      camera.position.distanceToSquared(lastEye.current) > 1e-8 || explode !== lastExplode.current
+    if (!moved && sinceLast.current < DECLUTTER_INTERVAL) return
     sinceLast.current = 0
+    lastEye.current.copy(camera.position)
+    lastExplode.current = explode
 
-    // Read once per pass, not per label: it is a computed-style read.
-    const m = metrics()
-    const half = labelHeight(m.scale) / 2
     const boxes: LabelBox[] = []
+    const elements = new Map<string, HTMLElement>()
     for (const spec of specs) {
+      const el = document.querySelector<HTMLElement>(`[data-testid="callout-${spec.id}"]`)
+      if (!el) continue
+      elements.set(spec.id, el)
+      // Behind the camera, or past the far plane: there is nothing to label, and
+      // drei will have parked its element somewhere meaningless.
       const p = probe.current.set(spec.at[0], spec.at[1], spec.at[2]).project(camera)
-      // Behind the camera, or past the far plane: there is nothing to label.
       if (p.z > 1) continue
-      const x = (p.x * 0.5 + 0.5) * size.width
-      const y = (-p.y * 0.5 + 0.5) * size.height
-      boxes.push({
-        id: spec.id,
-        left: x,
-        right: x + labelWidth(spec.label, spec.value, m),
-        top: y - half,
-        bottom: y + half,
-      })
+      // The box the browser actually laid out. Estimating it from the character
+      // count was wrong by a few per cent at one type size and by enough to
+      // matter at another, and every correction — letter-spacing, the dot, the
+      // padding, the gap — was one more constant mirroring a stylesheet.
+      const r = el.getBoundingClientRect()
+      if (r.width < 1) continue
+      boxes.push({ id: spec.id, left: r.left, right: r.right, top: r.top, bottom: r.bottom })
     }
-    const keep = withoutCollisions(boxes)
+    // Nothing measurable yet — drei mounts these a frame or two after the scene,
+    // and a pass with no boxes would find no labels worth keeping and hide every
+    // one of them. No measurement is no information, so last time's set stands.
+    if (elements.size === 0) return
 
-    setPlaced((prev) =>
-      prev.of === key && prev.ids.length === keep.length && prev.ids.every((id, i) => id === keep[i])
-        ? prev
-        : { of: key, ids: keep },
-    )
+    const keep = new Set(withoutCollisions(boxes))
+    for (const [id, el] of elements) {
+      // The attribute alone; the stylesheet turns it into visibility. An element
+      // that has never been through a pass carries no attribute and is hidden by
+      // the same rule, so nothing is ever painted unvetted.
+      const hide = String(!keep.has(id))
+      if (el.dataset.hidden !== hide) el.dataset.hidden = hide
+    }
   })
-
-  const shown = placed.of === key ? specs.filter((s) => placed.ids.includes(s.id)) : specs
 
   return (
     <>
-      {shown.map((s) => (
+      {specs.map((s) => (
         <Callout key={s.id} spec={s} />
       ))}
     </>
