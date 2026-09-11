@@ -1,18 +1,24 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * A CI runner has no GPU: the whole 3D scene is rendered by SwiftShader on the
- * CPU, and it is several times slower than a developer machine doing the same
- * thing. Timeouts are generous there rather than tuned to whatever is fastest
- * locally, because a suite that only passes on the author's laptop is not a
- * suite.
+ * Every run of this suite renders the 3D scene on the CPU.
+ *
+ * `launchOptions` below forces `--use-angle=swiftshader` for everyone, not just
+ * for CI, so that a screenshot means the same thing wherever it was taken. The
+ * timeouts here used to be halved when `process.env.CI` was unset, on the
+ * assumption that a developer machine is faster — but it is doing exactly the
+ * same software rasterising, and the only thing that split achieved was a suite
+ * that failed locally and passed on CI.
+ *
+ * The numbers are sized for what that work actually costs. Forcing a WebGL frame
+ * capture takes 10-13s here, measured, and flat whether the clip is a whole
+ * viewport or a 200x120 corner — it is the capture, not the pixels. Anything
+ * that screenshots the canvas needs room for several of those.
  */
-const SLOW = Boolean(process.env.CI)
-
 export default defineConfig({
   testDir: './e2e',
-  timeout: SLOW ? 240_000 : 120_000,
-  expect: { timeout: SLOW ? 45_000 : 25_000 },
+  timeout: 420_000,
+  expect: { timeout: 45_000 },
   fullyParallel: false,
   workers: 1,
   reporter: [['list']],
@@ -22,8 +28,8 @@ export default defineConfig({
     // The load event waits on the first WebGL frame, which is exactly the slow
     // part. Every test waits for the canvas explicitly straight afterwards, so
     // waiting for it twice only costs time.
-    navigationTimeout: SLOW ? 120_000 : 60_000,
-    actionTimeout: SLOW ? 45_000 : 20_000,
+    navigationTimeout: 120_000,
+    actionTimeout: 90_000,
     launchOptions: {
       args: [
         '--use-gl=angle',

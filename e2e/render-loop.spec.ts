@@ -25,11 +25,12 @@ async function captureViewport(page: Page, hideCanvas = false): Promise<Buffer> 
               ${hideCanvas ? '[data-testid="viewport"] canvas { visibility: hidden !important; }' : ''}`,
   })
   await page.waitForTimeout(400)
+  // What this costs on a CPU rasteriser, and why the budget for it is where it
+  // is, is recorded in playwright.config.ts.
   return page.locator('[data-testid="viewport"]').screenshot()
 }
 
 test('the 3D scene is actually rendering', async ({ page }) => {
-  test.setTimeout(240_000)
   await page.setViewportSize({ width: 1024, height: 768 })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('[data-testid="viewport"] canvas', { timeout: 120_000 })
@@ -47,7 +48,6 @@ test('the 3D scene is actually rendering', async ({ page }) => {
 })
 
 test('the picture changes when the view does', async ({ page }) => {
-  test.setTimeout(240_000)
   await page.setViewportSize({ width: 1024, height: 768 })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('[data-testid="viewport"] canvas', { timeout: 120_000 })

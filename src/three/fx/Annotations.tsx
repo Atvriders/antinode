@@ -25,6 +25,19 @@ import type { ViewId } from '../../content/types'
  * first.
  */
 
+/**
+ * How much clear space a label is given on each side, in pixels.
+ *
+ * Two labels that miss each other by two pixels have not missed each other as
+ * far as a reader is concerned, and two pixels is also less than the scene moves
+ * between the pass that measures a box and the frame that paints it — the camera
+ * is still settling, drei writes its transforms in its own `useFrame`, and the
+ * order between the two is not guaranteed. Asking for a gap rather than for bare
+ * non-overlap costs an occasional label that would just have fitted, and buys
+ * the whole class of near-miss.
+ */
+const LABEL_GAP = 4
+
 /** A label box in viewport pixels. */
 export type LabelBox = { id: string; left: number; right: number; top: number; bottom: number }
 
@@ -182,7 +195,13 @@ export function Annotations({
       // padding, the gap — was one more constant mirroring a stylesheet.
       const r = el.getBoundingClientRect()
       if (r.width < 1) continue
-      boxes.push({ id: spec.id, left: r.left, right: r.right, top: r.top, bottom: r.bottom })
+      boxes.push({
+        id: spec.id,
+        left: r.left - LABEL_GAP,
+        right: r.right + LABEL_GAP,
+        top: r.top - LABEL_GAP,
+        bottom: r.bottom + LABEL_GAP,
+      })
     }
     // Nothing measurable yet — drei mounts these a frame or two after the scene,
     // and a pass with no boxes would find no labels worth keeping and hide every
