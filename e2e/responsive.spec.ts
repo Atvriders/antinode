@@ -489,16 +489,38 @@ function currentView(page: Page): Promise<string> {
  * the resting position, not the entrance.
  */
 async function stillMoving(page: Page, testid: string): Promise<void> {
+  // Where it is, not whether an animation object exists. `getAnimations()`
+  // emptying is the wrong signal: React re-rendering the card restarts the slide,
+  // so on a machine slow enough to re-render during it the list may never be
+  // empty, and the test fails on a card that has been sitting still for seconds.
+  // Sub-pixel, and the animation's own state alongside it. Rounding hid the tail
+  // of the ease-out: the last few tenths of a pixel take longer than the poll
+  // interval, so two consecutive reads agreed while the card was still arriving
+  // and it was measured six pixels from where it lands.
+  const read = () =>
+    page.evaluate((id) => {
+      const el = document.querySelector(`[data-testid="${id}"]`)
+      const r = el?.getBoundingClientRect()
+      if (!r) return ''
+      const running = el
+        ? el.getAnimations().some((a) => a.playState === 'running')
+        : false
+      return `${r.left.toFixed(2)},${r.top.toFixed(2)},${r.width.toFixed(2)},${running}`
+    }, testid)
+  let same = 0
+  let previous = ''
   await expect
     .poll(
-      async () =>
-        page.evaluate(
-          (id) => document.querySelector(`[data-testid="${id}"]`)?.getAnimations().length ?? 0,
-          testid,
-        ),
-      { message: `${testid} never stopped animating`, timeout: 10_000, intervals: [100] },
+      async () => {
+        const now = await read()
+        const settled = now !== '' && now === previous && now.endsWith('false')
+        same = settled ? same + 1 : 0
+        previous = now
+        return same
+      },
+      { message: `${testid} never came to rest`, timeout: 30_000, intervals: [200] },
     )
-    .toBe(0)
+    .toBeGreaterThanOrEqual(2)
 }
 
 /**
@@ -542,6 +564,43 @@ async function labelsAtRest(page: Page): Promise<void> {
         timeout: 40_000,
         intervals: [250],
       },
+    )
+    .toBeGreaterThanOrEqual(2)
+}
+
+/**
+ * Waits for the camera to stop moving, without taking a screenshot to find out.
+ *
+ * The labels over the model are DOM, and they are positioned from the camera
+ * every frame, so their screen positions are a free read of whether the scene is
+ * still settling. When no label is showing there is nothing to read and this
+ * falls back to a fixed window — still cheaper than a capture.
+ */
+async function sceneAtRest(page: Page): Promise<void> {
+  const read = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-testid^="callout-"][data-hidden="false"]'))
+        .map((el) => {
+          const r = el.getBoundingClientRect()
+          return `${Math.round(r.left)},${Math.round(r.top)}`
+        })
+        .join('|'),
+    )
+  if ((await read()) === '') {
+    await page.waitForTimeout(4000)
+    return
+  }
+  let same = 0
+  let previous = ''
+  await expect
+    .poll(
+      async () => {
+        const now = await read()
+        same = now === previous ? same + 1 : 0
+        previous = now
+        return same
+      },
+      { message: 'the scene never stopped moving', timeout: 60_000, intervals: [400] },
     )
     .toBeGreaterThanOrEqual(2)
 }
@@ -820,14 +879,18 @@ test.describe('compact rendering', () => {
     const exterior = await canvasPixels(page)
 
     await chooseView(page, 'thermal', 'compact')
-    await expect
-      .poll(async () => (await canvasPixels(page)) !== exterior, {
-        message:
-          'the compact selector moved the shell to the thermal view and the canvas kept drawing the exterior one',
-        timeout: 45_000,
-        intervals: [1000],
-      })
-      .toBe(true)
+    // The cheap half first: the shell must agree it changed view at all.
+    await expect.poll(() => currentView(page), { timeout: 20_000 }).toBe('thermal')
+    // Then the expensive half, once rather than in a loop. Every evaluation of
+    // canvasPixels is a WebGL frame capture, which costs 10-20s on a CPU
+    // rasteriser — polling it burns the whole budget on two attempts and reports
+    // a stale first one as the answer. Wait for the camera to stop moving, then
+    // look.
+    await sceneAtRest(page)
+    expect(
+      await canvasPixels(page),
+      'the compact selector moved the shell to the thermal view and the canvas kept drawing the exterior one',
+    ).not.toBe(exterior)
   })
 })
 
